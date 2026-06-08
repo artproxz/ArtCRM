@@ -11,6 +11,13 @@ This pilot setup intentionally does not include business logic. It only defines 
 - `infrastructure/` - deployment and infrastructure placeholder.
 - `docs/` - project documentation placeholder.
 
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Domain Model](docs/DOMAIN_MODEL.md)
+- [API Contracts](docs/API_CONTRACTS.md)
+- [Request Lifecycle](docs/REQUEST_LIFECYCLE.md)
+
 ## Configuration
 
 Copy `.env.example` to `.env` for local development configuration. The example file contains demo/dev-safe placeholder values only and must not be used as a real environment file with production secrets.

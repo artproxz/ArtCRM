@@ -12,3 +12,4 @@ All notable changes to this project will be documented in this file.
 - Added ART-002 architecture foundation and initial domain model documentation.
 - Updated `.env.example` with safe ART-005 development configuration placeholders.
 - Added ART-007 security baseline with `.gitignore` and secret handling rules.
+- Added ART-API-001 conceptual API contracts and request lifecycle documentation.
