@@ -8,3 +8,4 @@ All notable changes to this project will be documented in this file.
 
 - Created the initial repository scaffold with `backend/`, `frontend/`, `infrastructure/`, and `docs/` directories.
 - Added project documentation placeholders: `README.md`, `AGENTS.md`, `.env.example`, and this changelog.
+- Documented the GitHub, Linear, and Codex workflow rules for ART-001 follow-up work.
