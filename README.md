@@ -13,7 +13,11 @@ This pilot setup intentionally does not include business logic. It only defines 
 
 ## Configuration
 
-Copy `.env.example` to `.env` for local configuration when implementation begins. The example file contains placeholder values only and must not be used as real credentials.
+Copy `.env.example` to `.env` for local development configuration. The example file contains demo/dev-safe placeholder values only and must not be used as a real environment file with production secrets.
+
+Do not commit real secrets, tokens, passwords, API keys, mail credentials, database credentials, or model paths. Local values belong in an untracked `.env` file.
+
+Ollama is configured through `OLLAMA_BASE_URL` and model name variables such as `OLLAMA_MAIL_READER_MODEL` and `OLLAMA_CATALOG_MATCHER_MODEL`. ArtCRM does not configure Ollama through a filesystem path to a model file.
 
 ## Development Workflow
 
