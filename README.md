@@ -19,6 +19,14 @@ Do not commit real secrets, tokens, passwords, API keys, mail credentials, datab
 
 Ollama is configured through `OLLAMA_BASE_URL` and model name variables such as `OLLAMA_MAIL_READER_MODEL` and `OLLAMA_CATALOG_MATCHER_MODEL`. ArtCRM does not configure Ollama through a filesystem path to a model file.
 
+## Security Notes
+
+- Never commit `.env` or environment-specific `.env.*` files.
+- Keep `.env.example` committed with placeholder or demo values only.
+- Never commit real tokens, passwords, API keys, mail credentials, database credentials, private keys, certificates, or model paths.
+- Do not print secrets in logs, UI output, documentation examples, pull request descriptions, or issue comments.
+- If a secret is accidentally committed, rotate it outside the repository and treat the repository value as compromised.
+
 ## Development Workflow
 
 - Linear is the source of tasks.

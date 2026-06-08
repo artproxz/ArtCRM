@@ -17,6 +17,14 @@ This repository is in its initial scaffold phase.
 - `infrastructure/` is reserved for deployment and infrastructure assets.
 - `docs/` is reserved for project documentation.
 
+## Secret Handling Rules
+
+- Never commit `.env` or environment-specific `.env.*` files.
+- Keep `.env.example` committed with placeholder or demo values only.
+- Never commit real tokens, passwords, API keys, mail credentials, database credentials, private keys, certificates, or model paths.
+- Never print secrets in logs, UI output, documentation examples, pull request descriptions, or issue comments.
+- If a real secret is found in the repository, stop work and report it so the secret can be rotated outside the codebase.
+
 ## Codex Workflow Rules
 
 - Complete all tasks as small, reviewable pull requests.
