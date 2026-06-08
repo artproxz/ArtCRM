@@ -23,6 +23,19 @@ Copy `.env.example` to `.env` for local configuration when implementation begins
 - Use the real Linear issue ID to link a PR with Linear.
 - Store the internal backlog code, such as `ART-001` or `ART-002`, additionally in the PR title and description.
 
+## Development Architecture
+
+Planned stack for future implementation:
+
+- Frontend: React.
+- Backend: FastAPI.
+- Database: PostgreSQL.
+- Cache/Queue: Redis.
+- Local AI runtime: Ollama.
+- Integration layer: backend-only boundary for mail, 1C, Ollama, catalog matching, and secrets.
+
+Implementation of this stack is deferred to later tasks. This repository currently contains architecture documentation only.
+
 ## Current Scope
 
 - Create the initial repository layout.
