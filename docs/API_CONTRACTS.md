@@ -142,20 +142,23 @@ RequestPosition API manages line items extracted from a RequestCard. It keeps ra
 
 ### Purpose
 
-AgentRun API provides traceability and controlled interaction for AI-assisted backend workflows such as Mail Reader Agent and catalog matching assistance. It exposes run status, validation outcome, and non-secret execution summaries.
+AgentRun API provides traceability and controlled interaction for AI-assisted backend workflows such as Mail Reader Agent, Product Selector / CRM Position Intent Agent, Manager Catalog Assistant, Client Catalog Assistant, and Response Draft Agent. It exposes run status, validation outcome, and non-secret execution summaries.
+
+AgentRun API does not give the frontend direct access to Ollama or any AI runtime. Frontend may request or observe backend-managed workflows only through authenticated backend APIs.
 
 ### Main Operations
 
 - List agent runs by type, status, RequestCard, RequestPosition, and time range.
 - Get agent run details with input references, output references, validation result, and safe error summary.
 - Start a backend-controlled Mail Reader Agent run for an eligible mail intake item.
-- Start a backend-controlled catalog matching assistance run for eligible positions.
+- Start a backend-controlled catalog assistance run for eligible positions.
+- Start a backend-controlled Response Draft Agent run for customer-response text only.
 - Mark agent output as validated, rejected, or requiring operator review.
 - Archive old agent run records according to retention policy.
 
 ### Input Data
 
-- Agent type such as mail_reader or catalog_matcher.
+- Agent type such as mail_reader, position_intent, manager_catalog_assistant, client_catalog_assistant, or response_draft.
 - Controlled backend input reference, not raw unbounded frontend text.
 - RequestCard or RequestPosition references when applicable.
 - Operator or backend workflow trigger context.
@@ -165,7 +168,11 @@ AgentRun API provides traceability and controlled interaction for AI-assisted ba
 
 - AgentRun identifier, agent type, status, and timestamps.
 - Input reference and output reference safe for audit.
-- Validation result and unresolved warnings.
+- `prompt_version`, `model_name`, and `input_hash` metadata.
+- `raw_response` retained according to policy and redaction rules.
+- `normalized_response` with backend-normalized candidate data.
+- `confidence` marker.
+- `validation_errors` for schema, safety, business, or consistency checks.
 - Candidate data summary safe for UI display.
 - Non-secret error summary when the run fails.
 
@@ -192,7 +199,8 @@ Frontend must not call Ollama or any AI runtime directly. External systems must 
 - Entire AI output payload.
 - Extracted RequestCard fields.
 - Extracted RequestPosition fields.
-- Catalog match suggestions.
+- Catalog explanation and ranking suggestions.
+- Response draft text before sending.
 - Classifications, summaries, confidence scores, and explanations.
 - Error text before exposing it to UI or logs.
 
@@ -201,6 +209,8 @@ Frontend must not call Ollama or any AI runtime directly. External systems must 
 ### Purpose
 
 Catalog Matching API provides backend-owned matching between validated RequestPosition drafts and structured catalog data. It separates match suggestions from approved catalog links.
+
+Backend Catalog Matcher is a backend service, not a pure LLM agent. LLM assistance may explain or rank candidates, but backend matching rules own final score handling, critical mismatch detection, analog flags, `needs_review`, and approval boundaries.
 
 ### Main Operations
 
@@ -224,6 +234,9 @@ Catalog Matching API provides backend-owned matching between validated RequestPo
 - Match candidate identifiers.
 - CatalogItem references safe for UI display.
 - Confidence level or ranking.
+- Critical mismatch flag.
+- Analog flag.
+- `needs_review` decision.
 - Explanation and unresolved fields.
 - Warnings for ambiguous or incomplete data.
 - Final approved match reference when selected.
@@ -252,6 +265,53 @@ No caller may bypass backend validation and write catalog links directly into bu
 - AI-assisted substitutions, aliases, and explanations.
 - Operator-selected candidate before final approval.
 - Any catalog reference used by documents, CRM, pricing, stock, or 1C exchange.
+
+## Future Document and Invoice Generation API
+
+### Purpose
+
+Future document/invoice generation API will generate invoices, commercial proposals, PDFs, letters, print forms, and accompanying documents through backend-only deterministic templates or scripts.
+
+This API is intentionally documented as a future backend boundary only. It is not implemented in this task.
+
+### Input Data
+
+- Approved RequestCard reference.
+- Approved RequestPosition references.
+- Approved CatalogItem matches.
+- Validated Counterparty and requisites.
+- Backend-calculated price, VAT, totals, amount in words, and delivery terms.
+- Selected backend document template.
+
+### Output Data
+
+- Generated document reference.
+- Render status.
+- Non-secret validation warnings.
+- Safe preview metadata.
+
+### Main Errors
+
+- RequestCard is not approved.
+- One or more positions are not approved.
+- Catalog match is unresolved or rejected.
+- Counterparty requisites are missing or invalid.
+- Financial values are missing backend validation.
+- Template is unavailable or invalid.
+
+### Allowed Callers
+
+- Backend document workflow services.
+- Frontend manager UI through authenticated backend API.
+- Backend administrative or audit tools.
+
+### Non-Negotiable Validation Rules
+
+- API must accept only validated/approved data.
+- API must not trust LLM-generated financial values.
+- LLM must not calculate sums, VAT, prices, requisites, totals, amount in words, delivery terms, signatures, seals, or final document values.
+- Response Draft Agent may provide only text for messages, cover letters, explanations, and clarification questions.
+- Final invoice, commercial proposal, and PDF generation must be deterministic and backend-owned.
 
 ## Deferred Contract Decisions
 

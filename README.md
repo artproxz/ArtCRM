@@ -17,6 +17,7 @@ This pilot setup intentionally does not include business logic. It only defines 
 - [Domain Model](docs/DOMAIN_MODEL.md)
 - [API Contracts](docs/API_CONTRACTS.md)
 - [Request Lifecycle](docs/REQUEST_LIFECYCLE.md)
+- [Agent Platform](docs/AGENT_PLATFORM.md)
 
 ## Configuration
 
