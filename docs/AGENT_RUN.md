@@ -2,7 +2,7 @@
 
 This document fixes the conceptual AgentRun schema, validation error taxonomy, prompt/model versioning policy, retry/fallback rules, and quality loop before backend implementation begins. It does not define SQL, ORM models, migrations, API routes, FastAPI code, frontend code, containers, Redis, PostgreSQL, or runtime dependencies.
 
-Agent-specific JSON/DTO output contracts are defined in [Agent JSON Schemas and DTO Contracts](AGENT_JSON_SCHEMAS.md).
+Agent-specific JSON/DTO output contracts are defined in [Agent JSON Schemas and DTO Contracts](AGENT_JSON_SCHEMAS.md). Product Selector Agent quality evaluation is defined in [Product Selector Agent Quality Evaluation Plan](PRODUCT_SELECTOR_EVAL.md).
 
 ## Core Principles
 
@@ -124,6 +124,7 @@ Status notes:
 - AgentRun must link to the quality review decision or correction reference.
 - Quality review should capture expected value, actual candidate value, correction reason, and reviewer identity where appropriate.
 - Future reports should show quality by `agent_name`, `agent_type`, `prompt_version`, `model_name`, validation error code, review decision, and correction frequency.
+- Product Selector Agent quality categories and fixture conversion guidance are defined in `PRODUCT_SELECTOR_EVAL.md`.
 - Repeated errors should produce candidates for prompt updates, validation rule updates, catalog normalization work, or training/evaluation sets.
 
 ## Security and Redaction Rules
