@@ -13,3 +13,4 @@ All notable changes to this project will be documented in this file.
 - Updated `.env.example` with safe ART-005 development configuration placeholders.
 - Added ART-007 security baseline with `.gitignore` and secret handling rules.
 - Added ART-API-001 conceptual API contracts and request lifecycle documentation.
+- Added ART-AGENT-001 agent platform foundation and backend-only service boundaries.
