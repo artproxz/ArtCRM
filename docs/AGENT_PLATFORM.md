@@ -2,7 +2,7 @@
 
 This document fixes the ArtCRM agent platform boundaries before backend, FastAPI, Podman, PostgreSQL, and Redis implementation begins. It separates LLM agents from backend-only services and records that agents produce candidate data, while backend services and managers make final business decisions.
 
-Agent and backend-service JSON/DTO contracts are defined in [Agent JSON Schemas and DTO Contracts](AGENT_JSON_SCHEMAS.md). AgentRun audit and quality policy is defined in [AgentRun Schema and Quality Policy](AGENT_RUN.md).
+Agent and backend-service JSON/DTO contracts are defined in [Agent JSON Schemas and DTO Contracts](AGENT_JSON_SCHEMAS.md). AgentRun audit and quality policy is defined in [AgentRun Schema and Quality Policy](AGENT_RUN.md). Product Selector quality evaluation is defined in [Product Selector Agent Quality Evaluation Plan](PRODUCT_SELECTOR_EVAL.md).
 
 ## Core Rule
 
@@ -86,7 +86,8 @@ Not allowed:
 
 Quality note:
 
-- The current Product Selector Agent result does not satisfy the product owner and must be evaluated in a separate quality-testing task before relying on automation.
+- The current Product Selector Agent result does not satisfy the product owner and must be evaluated before relying on automation.
+- Evaluation categories, pass/fail rules, and fixture conversion guidance are defined in [Product Selector Agent Quality Evaluation Plan](PRODUCT_SELECTOR_EVAL.md).
 
 ### Client Catalog Assistant
 
