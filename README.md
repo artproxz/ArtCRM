@@ -19,6 +19,7 @@ This pilot setup intentionally does not include business logic. It only defines 
 - [Request Lifecycle](docs/REQUEST_LIFECYCLE.md)
 - [Agent Platform](docs/AGENT_PLATFORM.md)
 - [AgentRun Schema and Quality Policy](docs/AGENT_RUN.md)
+- [Agent JSON Schemas and DTO Contracts](docs/AGENT_JSON_SCHEMAS.md)
 
 ## Configuration
 
