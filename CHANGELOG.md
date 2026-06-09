@@ -16,3 +16,4 @@ All notable changes to this project will be documented in this file.
 - Added ART-AGENT-001 agent platform foundation and backend-only service boundaries.
 - Added ART-AGENT-002 AgentRun schema, validation error taxonomy, prompt/model versioning, retry/fallback, and quality loop documentation.
 - Added ART-AGENT-003 LLM-agent JSON schemas and backend-service DTO contract documentation.
+- Added ART-AGENT-004 Product Selector Agent quality evaluation plan documentation.
