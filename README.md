@@ -21,6 +21,8 @@ This pilot setup intentionally does not include business logic. It only defines 
 - [AgentRun Schema and Quality Policy](docs/AGENT_RUN.md)
 - [Agent JSON Schemas and DTO Contracts](docs/AGENT_JSON_SCHEMAS.md)
 - [Product Selector Evaluation Plan](docs/PRODUCT_SELECTOR_EVAL.md)
+- [Product Selector Rulebook](docs/PRODUCT_SELECTOR_RULEBOOK.md)
+- [Product Selector Related Component Rules](docs/PRODUCT_SELECTOR_RELATED_COMPONENTS.md)
 
 ## Configuration
 
