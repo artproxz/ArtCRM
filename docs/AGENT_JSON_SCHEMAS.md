@@ -153,6 +153,8 @@ Readiness: existing / available as model/logic, but requires future quality test
 
 Evaluation plan: quality categories, synthetic examples, pass/fail criteria, and future fixture conversion guidance are defined in [Product Selector Agent Quality Evaluation Plan](PRODUCT_SELECTOR_EVAL.md).
 
+Rulebook: ROSMA-only Product Selector rules are defined in [Product Selector Rulebook](PRODUCT_SELECTOR_RULEBOOK.md). Related component recommendation rules are defined in [Product Selector Related Component Rules](PRODUCT_SELECTOR_RELATED_COMPONENTS.md).
+
 Purpose:
 
 - Parse one concrete position.
@@ -172,6 +174,7 @@ Important boundaries:
 - Does not approve catalog matches.
 - Does not bypass Backend Catalog Matcher.
 - Output goes to backend validation, then Backend Catalog Matcher.
+- Related component suggestions are recommendations only and require confirmation plus backend validation.
 
 Payload schema:
 
@@ -179,9 +182,25 @@ Payload schema:
 {
   "source_text": "demo raw position",
   "normalized_text": "demo normalized position",
+  "manufacturer_scope": "ROSMA",
+  "rosma_model_candidate": "demo ROSMA model candidate or unknown",
+  "structured_intent": {
+    "product_type": "demo_product_type",
+    "manufacturer": "ROSMA",
+    "series": "demo_series_or_unknown",
+    "model": "demo_model_or_unknown",
+    "range": "demo_range_or_unknown",
+    "connection": "demo_connection_or_unknown",
+    "accuracy_class": "demo_accuracy_or_unknown",
+    "material": "demo_material_or_unknown",
+    "execution": "demo_execution_or_unknown",
+    "options": ["demo_option"],
+    "quantity": 1,
+    "unit": "pcs"
+  },
   "intent": {
     "product_type": "demo_product_type",
-    "manufacturer": "demo_manufacturer_or_unknown",
+    "manufacturer": "ROSMA",
     "series": "demo_series_or_unknown",
     "model": "demo_model_or_unknown",
     "range": "demo_range_or_unknown",
@@ -202,10 +221,30 @@ Payload schema:
   },
   "must_have": ["demo required parameter"],
   "forbidden_mismatch": ["demo critical mismatch"],
+  "missing_fields": ["demo missing critical field"],
+  "warnings": ["demo warning requiring backend validation"],
   "analog_request": {
     "allowed": false,
+    "source_text": "",
     "reason": "Customer did not explicitly allow analogs"
   },
+  "related_component_suggestions": [
+    {
+      "relation_type": "service_position",
+      "suggested_type": "hydrofilling",
+      "suggested_model_candidate": "Гидрозаполнение глицерином для манометра диам.100 - 1 шт.",
+      "parent_position_ref": "request-position-candidate-ref",
+      "reason": "Customer requested hydrofilling for the parent pressure gauge",
+      "quantity_policy": "same_as_parent",
+      "quantity_candidate": 1,
+      "requires_confirmation": true,
+      "already_present_in_request": false,
+      "backend_validation_required": true,
+      "question_to_manager": "",
+      "manufacturer_scope": "ROSMA",
+      "future_manufacturer_extension_notes": "Hydrofilling support must be checked per manufacturer adapter."
+    }
+  ],
   "needs_clarification": true,
   "clarification_questions": [
     "Please confirm the required connection type."
@@ -213,10 +252,39 @@ Payload schema:
 }
 ```
 
+### Related Component Suggestions
+
+`related_component_suggestions[]` contains candidate recommendations only. It must not create confirmed RequestPositions, commercial proposal lines, invoice lines, PDF content, or email content.
+
+Minimum fields:
+
+- `relation_type` - relationship kind, such as accessory, service_position, installation_component, answer_part, assembly_service, or protective_component.
+- `suggested_type` - normalized related type, such as bushing, thermowell, three_way_valve, needle_valve, adapter, diaphragm_seal, cooler, hydrofilling, answer_part, or assembly_with_instrument.
+- `suggested_model_candidate` - candidate display/model text, not final catalog item.
+- `parent_position_ref` - reference to the parent position candidate.
+- `reason` - why the recommendation is relevant.
+- `quantity_policy` - quantity rule, such as same_as_parent, explicit_customer_quantity, or manager_review.
+- `quantity_candidate` - candidate quantity derived from policy.
+- `requires_confirmation` - true for all recommendations.
+- `already_present_in_request` - true when the customer already explicitly requested this related item.
+- `backend_validation_required` - true for all recommendations.
+- `question_to_manager` - safe clarification question when fields are missing or conflicting.
+- `manufacturer_scope` - current rule scope, such as ROSMA.
+- `future_manufacturer_extension_notes` - notes for future manufacturer adapters/rulebooks.
+
+Validation rules:
+
+- Backend must validate every related suggestion before it can become a draft business position.
+- If `already_present_in_request` is true, Product Selector must not duplicate the suggestion.
+- If a related item is present but conflicts with parent parameters, Product Selector should set warning/review fields instead of creating a duplicate.
+- Hydrofilling must be represented as a separate related service-position suggestion, not only as a note in the parent position.
+- Related suggestions must not include prices, VAT, totals, lead times, final catalog approvals, secrets, credentials, model paths, or real customer data.
+
 Downstream consumer:
 
-- Backend validation validates intent fields and required parameters.
+- Backend validation validates intent fields, required parameters, manufacturer scope, and related suggestions.
 - Backend Catalog Matcher receives validated intent/search hints.
+- Related component suggestions wait for manager or customer confirmation.
 - Quality review must evaluate this agent separately before relying on automated usage.
 
 ## Client Catalog Assistant Output
