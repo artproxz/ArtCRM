@@ -69,6 +69,9 @@ Expected payload fields:
 - `analog_request`
 - `needs_clarification`
 - `clarification_questions[]`
+- `manufacturer_scope`
+- `rosma_model_candidate`
+- `related_component_suggestions[]`
 
 Required boundaries:
 
@@ -78,6 +81,7 @@ Required boundaries:
 - Product Selector must not calculate prices, VAT, totals, delivery terms, or document values.
 - Product Selector must not fabricate missing critical parameters.
 - Product Selector must not claim a final catalog match.
+- Product Selector must not add related components as confirmed positions.
 
 ## Critical Fields for Industrial Product Matching
 
@@ -97,6 +101,8 @@ Critical fields:
 - `analog_request.allowed` - whether customer explicitly allows analogs.
 - `must_have[]` - constraints that must remain true for matching.
 - `forbidden_mismatch[]` - mismatches that must block auto-apply in Backend Catalog Matcher.
+- `manufacturer_scope` - currently ROSMA-only for this rulebook and fixture family.
+- `related_component_suggestions[]` - recommendations only, never confirmed business positions.
 
 Critical fields must not be inferred without evidence from the line or controlled context. If a critical field is absent, the agent should mark it as unknown, ask a clarification question, and keep the output as candidate data.
 
@@ -136,6 +142,26 @@ Evaluation must cover at least these categories:
 - forbidden mismatch detection.
 
 Future automated fixtures should tag every test case with one or more categories so quality reports can show weakness by product family and field type.
+
+## Rulebook and Related Component Fixture Coverage
+
+Future fixtures must also verify:
+
+- ROSMA-only manufacturer scope for current Product Selector rulebook behavior;
+- future manufacturer extension boundary, including Manotomm, Fiztech, WIKA, Kabeltec, and other future adapters;
+- `manufacturer_scope=ROSMA` for ROSMA rulebook cases;
+- `rosma_model_candidate` as candidate search text, not final catalog approval;
+- `related_component_suggestions[]` shape and required fields;
+- related component recommendations for gauges, thermometers, pressure transducers, and diaphragm seals;
+- duplicate suppression when bushing, thermowell, hydrofilling, or valve is already present in source request;
+- conflict warning instead of duplicate recommendation when an explicit related component has incompatible parameters;
+- hydrofilling as a separate related `service_position`, not only as a note in the parent position;
+- hydrofilling quantity policy defaulting to parent quantity;
+- hydrofilling fluid clarification when glycerin/silicone is not specified;
+- no related component recommendation when the parent series/execution does not support it;
+- Product Selector never adding related components to invoice, commercial proposal, PDF, or confirmed RequestPosition by itself.
+
+These checks remain future fixture requirements only. This task does not add fixture files or an evaluation runner.
 
 ## Test Case Format
 
@@ -184,7 +210,7 @@ All examples are synthetic and must not be treated as real customer data.
 | Accessory, not main product | accessories / доп. оборудование | `Сифонная трубка для манометра, G1/2, нержавейка, 5 шт` | Classify as accessory, not pressure gauge; extract connection/material/quantity; avoid main product assumptions. |
 | Needs review rather than inventing | ambiguous or incomplete product line | `Нужен датчик как в прошлый раз, 2 штуки` | Extract quantity only; mark product_type and critical fields unknown; set `needs_clarification=true`; ask questions; do not invent model, range, connection, or manufacturer. |
 
-Additional future examples should include mixed Cyrillic/Latin abbreviations, decimal separators, MPa/bar/kPa conversion risks, axial/radial wording, explosion-proof options, and manufacturer/model-like strings.
+Additional future examples should include mixed Cyrillic/Latin abbreviations, decimal separators, MPa/bar/kPa conversion risks, axial/radial wording, explosion-proof options, manufacturer/model-like strings, related component recommendations, duplicate suppression, and hydrofilling as a service-position.
 
 ## Pass Criteria
 
@@ -200,6 +226,10 @@ A case passes when all applicable conditions are true:
 - Accessories are not misclassified as main products.
 - `must_have[]` preserves explicit customer constraints.
 - `forbidden_mismatch[]` captures mismatches that should block backend auto-apply.
+- `manufacturer_scope` follows the current ROSMA-only rulebook scope.
+- Related component suggestions are recommendations only and include required fields.
+- Duplicate related components are suppressed or marked as already present.
+- Hydrofilling is represented as separate related service-position when applicable.
 - Output does not include final catalog approval, `catalog_item_id`, price, VAT, totals, secrets, credentials, model paths, or real customer data.
 - The output can be consumed by backend validation and later by Backend Catalog Matcher as candidate input.
 
@@ -217,6 +247,9 @@ A case fails when any of these conditions occur:
 - The agent misclassifies an accessory as a main product or a main product as an accessory.
 - The agent misses an explicit analog request or invents analog permission when not requested.
 - The agent fails to flag a critical mismatch that should block auto-apply.
+- The agent applies ROSMA-specific rules as universal rules for another manufacturer.
+- The agent duplicates bushing, thermowell, hydrofilling, or valve suggestions already present in the request.
+- The agent represents hydrofilling only as parent note when a separate service-position suggestion is required.
 - The agent emits secrets, credentials, private keys, full prompts, filesystem model paths, production emails, or real customer data.
 
 ## Quality Metrics
@@ -240,6 +273,10 @@ Recommended metrics:
 - Hallucination rate for missing critical fields.
 - `needs_review` calibration: false negatives and false positives.
 - Accessory classification accuracy.
+- Related component recommendation precision.
+- Duplicate suppression accuracy.
+- Hydrofilling service-position extraction accuracy.
+- Manufacturer scope accuracy.
 - Manager correction rate.
 - Overall fixture pass rate.
 
@@ -256,6 +293,9 @@ Human review is required when:
 - accessory vs main product classification is unclear;
 - unit conversion could change product compatibility;
 - forbidden mismatch is detected;
+- related component suggestion has missing or conflicting parent parameters;
+- hydrofilling fluid type is missing or parent support is unclear;
+- manufacturer scope is not ROSMA under current rulebook;
 - the model returns unexpected fields;
 - backend validation reports `invalid_json`, `missing_required_field`, `invalid_quantity`, `invalid_unit`, `low_confidence`, `ambiguous_position`, or `critical_mismatch`;
 - the output would influence catalog matching, documents, CRM, or 1C exchange.
@@ -278,6 +318,7 @@ The model must not invent:
 - quantity;
 - unit;
 - analog permission;
+- related component model;
 - catalog item IDs;
 - prices, VAT, totals, discounts, delivery terms, or legal document values.
 
@@ -290,6 +331,8 @@ If a value is missing or uncertain, the output should use an unknown/empty candi
 - Unit normalization can hide dangerous mismatches if backend validation is weak.
 - Product families may share similar wording, especially gauges, sensors, and accessories.
 - Analog requests can be implied in natural language and may require manager review.
+- ROSMA-only rules can become harmful if applied to other manufacturers without adapters.
+- Related component suggestions may over-suggest unless duplicate suppression and confirmation are enforced.
 - Without Backend Catalog Matcher, evaluation can only judge intent extraction quality, not final catalog matching.
 - The first fixture set needs product-owner review before numeric thresholds become binding.
 
@@ -299,13 +342,13 @@ A later task can convert this plan into automated fixtures by:
 
 - creating fixture files with synthetic inputs and expected candidate JSON;
 - tagging each fixture with categories and critical fields;
-- adding expected pass/fail assertions for schema, field extraction, and non-fabrication;
+- adding expected pass/fail assertions for schema, field extraction, related recommendations, duplicate suppression, manufacturer scope, and non-fabrication;
 - recording `model_name`, `prompt_version`, `agent_version`, and fixture set version;
 - running the model through a controlled backend evaluation runner;
 - storing raw output by reference and normalized output through AgentRun-like records;
 - producing quality reports by category and validation error code.
 
-That later task must still keep backend validation mandatory and must not allow Product Selector output to approve catalog items directly.
+That later task must still keep backend validation mandatory and must not allow Product Selector output to approve catalog items or related components directly.
 
 ## Acceptance Criteria Checklist
 
@@ -317,4 +360,5 @@ That later task must still keep backend validation mandatory and must not allow 
 - Product Selector is not allowed to approve catalog items.
 - Product Selector is not allowed to calculate prices.
 - Product Selector is not allowed to fabricate missing critical parameters.
+- Product Selector is not allowed to apply ROSMA-only rules universally.
 - The plan can later be converted into automated evaluation fixtures.
