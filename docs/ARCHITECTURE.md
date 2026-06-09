@@ -47,6 +47,24 @@ Agent output is never saved directly into business tables. Backend validates, no
 
 Backend Catalog Matcher compares request positions against the structured catalog and returns match candidates with confidence, reasons, and unresolved fields. It is backend-owned because catalog matching requires domain rules, validation, auditability, and access to internal catalog data.
 
+### Agent Platform
+
+The Agent Platform separates LLM agents from backend-only services.
+
+LLM agents, such as Mail Reader Agent, CRM Position Intent Agent / Product Selector Agent, Client Catalog Assistant, Manager Catalog Assistant, and Response Draft Agent, may extract, structure, explain, rank, and draft text. Their output is always candidate data.
+
+Backend-only services, such as Backend Catalog Matcher, Agent Orchestrator, Agent Validation Service, Invoice/PDF Generator, and Document Template Service, own validation, orchestration, deterministic catalog decisions, document generation, and audit boundaries.
+
+Backend Catalog Matcher is a backend service, not a pure LLM. LLM may optionally assist with explanations or ranking, but final score handling, critical mismatch detection, analog flagging, `needs_review` decisions, and approved catalog links are backend responsibilities.
+
+### Document and Invoice Generation Boundary
+
+Invoices, commercial proposals, and PDFs are generated only by backend generators/templates/scripts using approved and validated data.
+
+Response Draft Agent may prepare customer response text, cover letters, explanations, clarification questions, and manager-facing message drafts. It must not calculate sums, VAT, prices, requisites, totals, amount in words, delivery terms, signatures, seals, or create final invoice/commercial proposal PDFs.
+
+Backend generators use confirmed Counterparty, requisites, RequestPosition, CatalogItem, quantity, price, VAT, totals, amount in words, delivery terms, signatures, seals, and print templates. Positions with conflicts, critical mismatch, unresolved catalog match, or low confidence remain in `needs_review` and do not enter final document generation.
+
 ### CRM Module
 
 The CRM module manages Counterparty, Deal, Project, RequestCard state, and document workflow state. It consumes only validated request and catalog data.
