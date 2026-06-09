@@ -2,17 +2,39 @@
 
 This document fixes the ArtCRM agent platform boundaries before backend, FastAPI, Podman, PostgreSQL, and Redis implementation begins. It separates LLM agents from backend-only services and records that agents produce candidate data, while backend services and managers make final business decisions.
 
+Agent and backend-service JSON/DTO contracts are defined in [Agent JSON Schemas and DTO Contracts](AGENT_JSON_SCHEMAS.md). AgentRun audit and quality policy is defined in [AgentRun Schema and Quality Policy](AGENT_RUN.md).
+
 ## Core Rule
 
 LLM agents help extract, structure, explain, and draft text. They do not own final business truth.
 
 Backend services own validation, deterministic calculations, persistence boundaries, catalog matching decisions, document generation, integration calls, and audit trails. A manager may approve or reject candidate data through the frontend, but the backend enforces the rules.
 
+## Readiness Status
+
+Existing / available but documented as contracts:
+
+- Mail Reader Agent generally exists as model/logic, but its JSON contract must be formally fixed and validated by backend.
+- CRM Position Intent Agent / Product Selector Agent generally exists as model/logic, but the current result is not accepted by the product owner. It requires separate future quality testing and possible rework.
+
+Target / not implemented yet:
+
+- Client Catalog Assistant.
+- Manager Catalog Assistant.
+- Response Draft Agent.
+- Backend Catalog Matcher.
+- Invoice/PDF Generator.
+- Agent Orchestrator.
+- Agent Validation Service.
+- Document Template Service.
+
+This document describes boundaries and target contracts. It must not be read as proof that all listed agents or backend-only services are already implemented.
+
 ## LLM Agent Map
 
 ### Mail Reader Agent
 
-MVP: yes.
+Readiness: existing / available as model/logic; JSON contract formalized in `AGENT_JSON_SCHEMAS.md`.
 
 Purpose:
 
@@ -32,19 +54,21 @@ Allowed outputs:
 Not allowed:
 
 - Create approved business data directly.
+- Choose final catalog products.
 - Write to business tables.
 - Calculate prices, VAT, totals, or legal document values.
 - Create final invoices, commercial proposals, or PDFs.
 
 ### CRM Position Intent Agent / Product Selector Agent
 
-MVP: yes.
+Readiness: existing / available as model/logic; requires future quality testing and possible rework.
 
 Purpose:
 
 - Help a manager structure a request position.
 - Normalize rough item descriptions into candidate intent.
 - Suggest attributes, units, and clarification questions.
+- Produce search hints for Backend Catalog Matcher.
 
 Allowed outputs:
 
@@ -60,9 +84,13 @@ Not allowed:
 - Calculate commercial terms, prices, VAT, or totals.
 - Bypass Backend Catalog Matcher.
 
+Quality note:
+
+- The current Product Selector Agent result does not satisfy the product owner and must be evaluated in a separate quality-testing task before relying on automation.
+
 ### Client Catalog Assistant
 
-MVP: deferred.
+Readiness: target / not implemented yet.
 
 Purpose:
 
@@ -79,16 +107,18 @@ Allowed outputs:
 Not allowed:
 
 - Access internal catalog data, pricing rules, secrets, 1C, mail, or databases directly.
+- Propose hidden, archived, or unverified catalog items.
 - Approve catalog matches for internal CRM.
+- Submit a request without customer confirmation.
 - Generate final invoices, commercial proposals, or PDFs.
 
 ### Manager Catalog Assistant
 
-MVP: yes.
+Readiness: target / not implemented yet.
 
 Purpose:
 
-- Help a manager search catalog candidates.
+- Help a manager search and understand catalog candidates.
 - Explain why candidates may match.
 - Suggest analogs and clarifying questions.
 - Summarize differences between candidates.
@@ -109,7 +139,7 @@ Not allowed:
 
 ### Response Draft Agent
 
-MVP: yes.
+Readiness: target / not implemented yet.
 
 Purpose:
 
@@ -136,15 +166,16 @@ Strictly not allowed:
 - Calculate totals or amount in words.
 - Create final invoice PDF.
 - Create final commercial proposal PDF.
+- Send email directly.
 - Produce final financial or legal document values.
 
-Response Draft Agent may reference already approved values for wording, but the backend remains the source of truth for all amounts, requisites, positions, articles, prices, VAT, totals, delivery terms, signatures, seals, and print templates.
+Response Draft Agent may reference already approved values for wording, but the backend remains the source of truth for all amounts, requisites, positions, articles, prices, VAT, totals, delivery terms, signatures, seals, print templates, PDFs, and send workflow.
 
 ## Backend-Only Service Map
 
 ### Backend Catalog Matcher
 
-MVP: yes.
+Readiness: target backend service / not implemented yet.
 
 Backend Catalog Matcher is a backend service, not a pure LLM agent.
 
@@ -174,7 +205,7 @@ Outputs:
 
 ### Agent Orchestrator
 
-MVP: yes.
+Readiness: target backend-only service / not implemented yet.
 
 Purpose:
 
@@ -186,7 +217,7 @@ Purpose:
 
 ### Agent Validation Service
 
-MVP: yes.
+Readiness: target backend-only service / not implemented yet.
 
 Purpose:
 
@@ -198,7 +229,7 @@ Purpose:
 
 ### Invoice/PDF Generator
 
-MVP: deferred until document workflow task.
+Readiness: target backend-only generator/template/script / not implemented yet.
 
 Purpose:
 
@@ -213,7 +244,7 @@ Strict rule:
 
 ### Document Template Service
 
-MVP: deferred until document workflow task.
+Readiness: target backend-only service / not implemented yet.
 
 Purpose:
 
@@ -241,6 +272,7 @@ LLM agents must not:
 - Validate legal requisites.
 - Generate final invoices, commercial proposals, or PDFs.
 - Access mail, 1C, databases, secrets, or internal catalog storage directly.
+- Send customer emails directly.
 
 Backend services must:
 
@@ -287,7 +319,7 @@ Data sources:
 
 Positions with conflicts, critical mismatch, unresolved catalog match, or low-confidence extraction must remain in `needs_review` and must not enter final document generation.
 
-Response Draft Agent may prepare only accompanying text, explanations, and clarification questions. It may not create final PDFs or calculate any financial/legal values.
+Response Draft Agent may prepare only accompanying text, explanations, and clarification questions. It may not create final PDFs, calculate any financial/legal values, or send email directly.
 
 ## AgentRun Audit and Trace Boundary
 
@@ -298,8 +330,8 @@ AgentRun records should be used for:
 - Mail Reader Agent runs.
 - CRM Position Intent Agent / Product Selector Agent runs.
 - Client Catalog Assistant runs when introduced.
-- Manager Catalog Assistant runs.
-- Response Draft Agent runs.
+- Manager Catalog Assistant runs when introduced.
+- Response Draft Agent runs when introduced.
 - Optional LLM-assisted catalog explanation or ranking runs.
 
 AgentRun fields used by the platform:
@@ -318,27 +350,6 @@ AgentRun fields used by the platform:
 Security note:
 
 - AgentRun records must not expose secrets, mail credentials, tokens, private keys, full prompts with sensitive data, sensitive customer data, or model paths to the frontend.
-
-## MVP Scope
-
-Included in MVP foundation:
-
-- Mail Reader Agent.
-- CRM Position Intent Agent / Product Selector Agent.
-- Manager Catalog Assistant.
-- Response Draft Agent.
-- Backend Catalog Matcher.
-- Agent Orchestrator.
-- Agent Validation Service.
-
-Deferred from MVP implementation:
-
-- Client Catalog Assistant customer-facing workflow.
-- Invoice/PDF Generator implementation.
-- Document Template Service implementation.
-- Advanced multi-agent planning.
-- Automated sending of customer responses.
-- Direct 1C document exchange implementation.
 
 ## Deferred Implementation
 

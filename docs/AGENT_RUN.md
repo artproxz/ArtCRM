@@ -2,6 +2,8 @@
 
 This document fixes the conceptual AgentRun schema, validation error taxonomy, prompt/model versioning policy, retry/fallback rules, and quality loop before backend implementation begins. It does not define SQL, ORM models, migrations, API routes, FastAPI code, frontend code, containers, Redis, PostgreSQL, or runtime dependencies.
 
+Agent-specific JSON/DTO output contracts are defined in [Agent JSON Schemas and DTO Contracts](AGENT_JSON_SCHEMAS.md).
+
 ## Core Principles
 
 - Every LLM agent run produces candidate data, not trusted business data.
@@ -133,6 +135,13 @@ Status notes:
 - Internal prompts must not contain secrets.
 - AgentRun must not store or expose filesystem model paths.
 
+## Relationship to JSON Schemas
+
+- LLM-agent outputs use the shared envelope and agent-specific payloads defined in `AGENT_JSON_SCHEMAS.md`.
+- Backend-service outputs are decision/validated outputs, not LLM candidate outputs.
+- AgentRun stores normalized LLM output after backend parsing and validation.
+- Backend service execution records should link to AgentRun records when they consume LLM candidate data.
+
 ## Relationship to Business Entities
 
 - AgentRun may propose changes to RequestCard and RequestPosition.
@@ -145,8 +154,8 @@ Status notes:
 The following decisions are intentionally deferred:
 
 - Physical database schema.
-- JSON schema definitions.
-- API request/response DTOs.
+- Machine-enforced JSON schema files.
+- API request/response DTO classes.
 - Storage backend for raw responses.
 - Retention policy and redaction implementation.
 - Quality report UI.
