@@ -151,6 +151,8 @@ Downstream consumer:
 
 Readiness: existing / available as model/logic, but requires future quality testing and possible rework because the product owner is not satisfied with the current result.
 
+Evaluation plan: quality categories, synthetic examples, pass/fail criteria, and future fixture conversion guidance are defined in [Product Selector Agent Quality Evaluation Plan](PRODUCT_SELECTOR_EVAL.md).
+
 Purpose:
 
 - Parse one concrete position.
