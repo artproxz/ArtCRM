@@ -100,6 +100,24 @@ Critical fields:
 
 Critical fields must not be inferred without evidence from the line or controlled context. If a critical field is absent, the agent should mark it as unknown, ask a clarification question, and keep the output as candidate data.
 
+## Needs Review Rules
+
+The Product Selector Agent does not approve a RequestPosition lifecycle state directly. It signals uncertainty through `needs_clarification`, `clarification_questions[]`, low confidence, `validation_hints`, `must_have[]`, and `forbidden_mismatch[]`. Backend validation then decides whether the affected RequestPosition should move to `needs_review`.
+
+Backend should treat Product Selector output as requiring `needs_review` when:
+
+- a critical field is missing or marked unknown;
+- two critical fields contradict each other;
+- range, unit, connection, or accuracy class can be interpreted in more than one way;
+- product type could be main product or accessory;
+- analog permission is implied but not explicit;
+- `forbidden_mismatch[]` is non-empty;
+- the output includes low confidence for product family, range, connection, quantity, or unit;
+- the agent emits unexpected fields or attempts to approve catalog data;
+- backend schema or business validation raises AgentRun validation errors.
+
+`needs_review` is a safe outcome. It is preferred over invented model, range, thread, manufacturer, material, option, or catalog identifiers.
+
 ## Test Categories
 
 Evaluation must cover at least these categories:
@@ -162,7 +180,7 @@ All examples are synthetic and must not be treated as real customer data.
 | Dirty client-style line | pressure gauge / манометр | `Нужно пару манометров примерно до 10 бар, резьба кажется полдюйма, обычные, можно варианты` | Extract likely pressure_gauge and quantity `2`; mark uncertain thread/range normalization; `analog_request.allowed=true`; ask clarification if thread is not explicit. |
 | Line with missing thread | pressure transducer / датчик давления | `Датчик давления 0-16 bar, 4-20 mA, accuracy 0.5, 3 pcs` | Extract product_type pressure_transducer, range, output option, accuracy, quantity; set `needs_clarification=true` because connection/thread is missing. |
 | Line with conflicting range/unit | vacuum gauge / вакуумметр | `Вакуумметр -1..0 bar 0..10 bar G1/4 1 шт` | Detect conflicting ranges; add forbidden mismatch / validation hint; set `needs_clarification=true`; do not choose one range silently. |
-| Line requesting analog | pressure gauge / манометр | `Манометр 0-6 bar G1/2 class 1.5, если нет такого — предложите аналог` | Extract analog request allowed; keep original must-have fields; analog must remain explicitly marked for Backend Catalog Matcher. |
+| Line requesting analog | pressure gauge / манометр | `Манометр 0-6 bar G1/2 class 1.5, если нет такого - предложите аналог` | Extract analog request allowed; keep original must-have fields; analog must remain explicitly marked for Backend Catalog Matcher. |
 | Accessory, not main product | accessories / доп. оборудование | `Сифонная трубка для манометра, G1/2, нержавейка, 5 шт` | Classify as accessory, not pressure gauge; extract connection/material/quantity; avoid main product assumptions. |
 | Needs review rather than inventing | ambiguous or incomplete product line | `Нужен датчик как в прошлый раз, 2 штуки` | Extract quantity only; mark product_type and critical fields unknown; set `needs_clarification=true`; ask questions; do not invent model, range, connection, or manufacturer. |
 
