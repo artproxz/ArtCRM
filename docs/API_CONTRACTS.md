@@ -9,6 +9,7 @@ All APIs are backend-owned. The frontend and integrations must treat backend res
 - Backend is the only component allowed to access mail, Ollama, 1C, databases, queues, cache, and secrets.
 - Frontend calls backend APIs only and never calls Ollama, mail, 1C, databases, or catalog storage directly.
 - AI output, mail extraction output, and catalog match suggestions are candidate data until backend validation and operator approval.
+- Agent-specific LLM output envelopes and backend-service DTO contracts are defined in [Agent JSON Schemas and DTO Contracts](AGENT_JSON_SCHEMAS.md) and must be treated as the payload source for future API DTOs.
 - APIs must expose validation status, unresolved fields, and review warnings instead of silently accepting ambiguous data.
 - API responses must not expose secrets, mail credentials, raw tokens, private keys, model paths, or internal integration credentials.
 - Business tables must receive only backend-validated and approved data.
