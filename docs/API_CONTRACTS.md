@@ -146,33 +146,39 @@ AgentRun API provides traceability and controlled interaction for AI-assisted ba
 
 AgentRun API does not give the frontend direct access to Ollama or any AI runtime. Frontend may request or observe backend-managed workflows only through authenticated backend APIs.
 
+Full AgentRun schema, validation error taxonomy, prompt/model versioning policy, retry/fallback rules, and quality loop are defined in [AgentRun Schema and Quality Policy](AGENT_RUN.md).
+
 ### Main Operations
 
-- List agent runs by type, status, RequestCard, RequestPosition, and time range.
+- List agent runs by type, status, RequestCard, RequestPosition, prompt version, model name, and time range.
 - Get agent run details with input references, output references, validation result, and safe error summary.
 - Start a backend-controlled Mail Reader Agent run for an eligible mail intake item.
 - Start a backend-controlled catalog assistance run for eligible positions.
 - Start a backend-controlled Response Draft Agent run for customer-response text only.
 - Mark agent output as validated, rejected, or requiring operator review.
+- Record manager quality feedback, correction references, and review decisions.
 - Archive old agent run records according to retention policy.
 
 ### Input Data
 
 - Agent type such as mail_reader, position_intent, manager_catalog_assistant, client_catalog_assistant, or response_draft.
+- Agent metadata such as `agent_name`, `agent_version`, `prompt_version`, `model_name`, and `model_provider` / `runtime`.
 - Controlled backend input reference, not raw unbounded frontend text.
 - RequestCard or RequestPosition references when applicable.
 - Operator or backend workflow trigger context.
 - Validation decision after backend checks.
+- Quality review decision, correction reference, or safe review comment.
 
 ### Output Data
 
-- AgentRun identifier, agent type, status, and timestamps.
+- AgentRun identifier, agent name, agent type, status, retry count, and timestamps.
 - Input reference and output reference safe for audit.
-- `prompt_version`, `model_name`, and `input_hash` metadata.
-- `raw_response` retained according to policy and redaction rules.
+- `agent_version`, `prompt_version`, `model_name`, `model_provider` / `runtime`, and `input_hash` metadata.
+- `raw_response_reference` retained according to policy and redaction rules.
 - `normalized_response` with backend-normalized candidate data.
+- `validation_status` and `validation_errors` for schema, safety, business, or consistency checks.
 - `confidence` marker.
-- `validation_errors` for schema, safety, business, or consistency checks.
+- Review metadata such as reviewed_by, review_decision, and safe review_comment.
 - Candidate data summary safe for UI display.
 - Non-secret error summary when the run fails.
 
@@ -184,13 +190,40 @@ AgentRun API does not give the frontend direct access to Ollama or any AI runtim
 - Agent output schema is invalid.
 - Validation failed.
 - Permission denied for caller role.
-- Run is already completed, rejected, or archived.
+- Run is already completed, rejected, approved, or archived.
+- Retry limit exceeded.
+
+### Validation Error Taxonomy
+
+AgentRun validation errors use the taxonomy defined in [AgentRun Schema and Quality Policy](AGENT_RUN.md):
+
+- invalid_json
+- missing_required_field
+- unexpected_field
+- invalid_enum
+- invalid_quantity
+- invalid_unit
+- low_confidence
+- ambiguous_position
+- critical_mismatch
+- unsafe_content
+- timeout
+- ollama_unavailable
+- validation_exception
+
+### Retry and Fallback Contract
+
+- API may allow one controlled retry for invalid_json or temporary runtime failures.
+- Retry must not be indefinite.
+- After repeated failure, affected candidate data moves to needs_review.
+- Agent failures must not block the entire RequestCard by default.
+- Error summaries must be redacted and safe for UI display.
 
 ### Allowed Callers
 
 - Backend workflow services.
 - Frontend operator UI for status reads and review decisions through backend API.
-- Backend administrative or audit tools.
+- Backend administrative, audit, or quality-review tools.
 
 Frontend must not call Ollama or any AI runtime directly. External systems must not start AgentRun records directly.
 
@@ -321,7 +354,7 @@ The following decisions are intentionally deferred to future implementation task
 - Request and response schema formats.
 - Authentication and authorization model.
 - Pagination, sorting, and filtering conventions.
-- Error code taxonomy.
-- Idempotency and retry rules.
+- Error code taxonomy beyond documented AgentRun taxonomy.
+- Idempotency and retry rules beyond documented AgentRun retry/fallback policy.
 - API versioning policy.
 - OpenAPI generation.

@@ -291,7 +291,7 @@ Response Draft Agent may prepare only accompanying text, explanations, and clari
 
 ## AgentRun Audit and Trace Boundary
 
-AgentRun is the single audit and trace contour for agent workflows.
+AgentRun is the single audit and trace contour for agent workflows. Full AgentRun schema, validation error taxonomy, prompt/model versioning, retry/fallback rules, and quality loop are defined in [AgentRun Schema and Quality Policy](AGENT_RUN.md).
 
 AgentRun records should be used for:
 
@@ -304,17 +304,20 @@ AgentRun records should be used for:
 
 AgentRun fields used by the platform:
 
-- `prompt_version` - version of prompt or instruction pack used for the run.
-- `model_name` - configured model name, not a filesystem model path.
+- `agent_name` and `agent_type` - agent identity for audit and reporting.
+- `agent_version` and `prompt_version` - versioning for quality comparisons.
+- `model_name` - configured Ollama/API model name, not a filesystem model path.
+- `model_provider` / `runtime` - runtime provider such as Ollama.
 - `input_hash` - hash of controlled backend input for traceability and deduplication.
-- `raw_response` - original LLM response retained according to policy and redaction rules.
+- `raw_response_reference` - reference to original LLM response retained according to policy and redaction rules.
 - `normalized_response` - backend-normalized candidate data.
 - `confidence` - agent-provided or backend-derived confidence marker.
 - `validation_errors` - schema, safety, business, or consistency validation errors.
+- `retry_count`, `review_decision`, and `review_comment` - quality loop and fallback trace fields.
 
 Security note:
 
-- AgentRun records must not expose secrets, mail credentials, tokens, private keys, full internal prompts with secrets, or model paths to the frontend.
+- AgentRun records must not expose secrets, mail credentials, tokens, private keys, full prompts with sensitive data, sensitive customer data, or model paths to the frontend.
 
 ## MVP Scope
 

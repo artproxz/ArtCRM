@@ -16,7 +16,7 @@ Typical use:
 
 - RequestCard: source mail is available for intake.
 - RequestPosition: usually not applicable because positions do not exist before parsing.
-- AgentRun: run has not started yet; use queued or running internally if implementation later needs finer states.
+- AgentRun: not used as an AgentRun status; AgentRun uses `queued` before execution starts.
 
 ### parsed
 
@@ -26,7 +26,7 @@ Typical use:
 
 - RequestCard: mail content has candidate request-level fields.
 - RequestPosition: line items have candidate fields from mail parsing.
-- AgentRun: output has been produced and awaits validation.
+- AgentRun: not used as an AgentRun status; AgentRun uses `completed` when output is produced and ready for validation.
 
 ### draft
 
@@ -36,7 +36,7 @@ Typical use:
 
 - RequestCard: draft card exists with candidate fields.
 - RequestPosition: draft position exists with candidate item data.
-- AgentRun: not usually applicable; AgentRun output may create drafts but the run itself is not edited as a draft.
+- AgentRun: not applicable; AgentRun output may create drafts but the run itself is not edited as a draft.
 
 ### needs_review
 
@@ -76,7 +76,7 @@ Typical use:
 
 - RequestCard: card is validated and ready for CRM workflow.
 - RequestPosition: position and catalog link are approved.
-- AgentRun: output has been validated and accepted as a source for approved or draft data.
+- AgentRun: output has been validated and accepted as candidate support for downstream entity changes.
 
 ### rejected
 
@@ -202,44 +202,52 @@ The incoming state usually does not apply because a RequestPosition does not exi
 
 ## AgentRun Lifecycle
 
-AgentRun represents one AI-assisted backend workflow execution, such as Mail Reader Agent extraction or catalog matching assistance.
+AgentRun represents one AI-assisted backend workflow execution. It uses execution and validation statuses optimized for audit and quality control.
 
-### Applicable States
+### Applicable Statuses
 
-- incoming
-- parsed
+- queued
+- running
+- completed
+- failed
 - needs_review
-- approved
 - rejected
+- approved
 - archived
-
-The draft, ready_for_matching, and matched states usually apply to RequestCard and RequestPosition rather than AgentRun. If future implementation needs operational run states, it may add queued, running, succeeded, or failed as technical statuses while preserving the validation lifecycle described here.
 
 ### Typical Transitions
 
-1. incoming -> parsed
-   Backend starts an agent run from controlled input and receives structured candidate output.
+1. queued -> running
+   Backend starts a controlled agent workflow from a backend input reference.
 
-2. parsed -> needs_review
-   Backend validation finds malformed, incomplete, low-confidence, or ambiguous output.
+2. running -> completed
+   Agent returns output and backend records it for parsing and validation.
 
-3. parsed -> approved
-   Backend validates the output and accepts it as a source for draft or approved domain data.
+3. running -> failed
+   Runtime fails, times out, or becomes unavailable before usable candidate data is produced.
 
-4. needs_review -> approved
-   Operator review resolves the issue and backend validates the final candidate data.
+4. completed -> needs_review
+   Backend validation finds malformed, incomplete, low-confidence, ambiguous, or contradictory output.
 
-5. parsed -> rejected or needs_review -> rejected
-   Backend or operator rejects the output.
+5. completed -> approved
+   Backend validation accepts the output for its intended candidate-data use.
 
-6. approved -> archived or rejected -> archived
+6. needs_review -> approved
+   Manager review resolves the issue and backend validates the corrected outcome.
+
+7. completed -> rejected or needs_review -> rejected
+   Backend or manager rejects the output.
+
+8. approved -> archived, rejected -> archived, or failed -> archived
    AgentRun is retained for audit and removed from active review queues.
 
 ### Guardrails
 
+- `completed` does not mean business-approved.
 - AgentRun output is never authoritative business data by itself.
 - Backend must validate response shape before exposing output to downstream workflows.
-- AgentRun errors must not expose secrets, mail credentials, tokens, private keys, model paths, or full internal prompts in UI or logs.
+- AgentRun errors must not expose secrets, mail credentials, tokens, private keys, model paths, full prompts, or sensitive data in UI or logs.
+- A failed or rejected AgentRun should not block the entire RequestCard by default; affected fields or positions move to `needs_review`.
 - An approved AgentRun can support draft or approved data, but the target entity still owns its own lifecycle.
 
 ## Cross-Entity Lifecycle Rules

@@ -18,6 +18,7 @@ This pilot setup intentionally does not include business logic. It only defines 
 - [API Contracts](docs/API_CONTRACTS.md)
 - [Request Lifecycle](docs/REQUEST_LIFECYCLE.md)
 - [Agent Platform](docs/AGENT_PLATFORM.md)
+- [AgentRun Schema and Quality Policy](docs/AGENT_RUN.md)
 
 ## Configuration
 

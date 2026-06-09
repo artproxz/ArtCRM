@@ -194,31 +194,51 @@ Represents a larger business context that can group deals, requests, documents, 
 
 ### Purpose
 
-Represents one execution of an AI-assisted backend workflow, such as Mail Reader Agent extraction or catalog matching assistance. AgentRun provides traceability, auditability, and validation status for AI outputs.
+Represents one execution of an AI-assisted backend workflow. AgentRun is the audit and quality-control record for agent output, backend validation, review decisions, prompt/model versioning, and retry/fallback behavior.
+
+AgentRun output is always candidate data. It cannot update approved business entities until backend validation and required manager review are complete.
 
 ### Key Fields
 
 - `id` - stable identifier.
-- `agent_type` - mail_reader, catalog_matcher, summarizer, or future backend agent type.
-- `input_ref` - reference to the controlled backend input.
-- `output_ref` - reference to stored candidate output when retained.
-- `status` - queued, running, succeeded, failed, rejected, or validated.
-- `validation_result` - backend validation outcome.
+- `agent_name` - human-readable agent role.
+- `agent_type` - normalized agent type.
+- `agent_version` - agent workflow version.
+- `prompt_version` - prompt or instruction-pack version.
+- `model_name` - Ollama/API model name, not a filesystem path.
+- `model_provider` / `runtime` - model runtime provider, for example Ollama.
+- `input_reference` - reference to controlled backend input.
+- `input_hash` - canonical input hash for traceability and quality comparison.
+- `request_card_id` - optional RequestCard reference.
+- `request_position_id` - optional RequestPosition reference.
+- `status` - queued, running, completed, failed, needs_review, rejected, approved, or archived.
+- `raw_response_reference` - reference to raw model output retained under redaction policy.
+- `normalized_response` - backend-normalized candidate data.
+- `validation_status` - not_validated, valid, invalid, partial, or needs_review.
+- `validation_errors` - validation error codes and safe details.
+- `confidence` - agent-provided or backend-derived confidence marker.
+- `retry_count` - controlled retry count.
 - `started_at` - start timestamp.
 - `finished_at` - finish timestamp.
-- `error_summary` - non-secret error summary when applicable.
+- `created_by` / `triggered_by` - actor or backend workflow that started the run.
+- `reviewed_by` - manager or reviewer.
+- `review_decision` - approved, rejected, corrected, needs_more_info, or deferred.
+- `review_comment` - safe review note.
 
 ### Relationships
 
 - May create or update RequestCard candidate data.
 - May propose RequestPosition values.
-- May propose CatalogItem match candidates.
-- May be linked to operator review decisions.
+- May support catalog explanation or ranking, while Backend Catalog Matcher owns final matching.
+- May produce Response Draft Agent text.
+- May be linked to manager review and quality review records.
 
 ### Data Requiring Backend Validation
 
 - Entire AI output payload.
 - Extracted fields, summaries, classifications, and match suggestions.
+- Response draft text before sending.
+- Confidence and validation status before using downstream.
 - Error details before logging or UI display.
 - Any data that could affect CRM, documents, catalog, 1C, or business tables.
 
