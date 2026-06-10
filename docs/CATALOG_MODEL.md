@@ -9,15 +9,16 @@ It does not add backend code, frontend code, SQL, ORM, migrations, containers, d
 ArtCRM catalog data must not be modeled as a flat SKU list only. The normalized catalog layer must support a constructor-style structure:
 
 1. manufacturer;
-2. product family;
-3. product type;
-4. product-type-specific filter profile;
-5. series/model;
-6. concrete catalog item / SKU;
-7. stock and availability as a separate layer;
-8. analog and related component rules as separate layers.
+2. source hierarchy;
+3. product family;
+4. product type;
+5. product-type-specific filter profile;
+6. series/model;
+7. concrete catalog item / SKU;
+8. stock and availability as a separate layer;
+9. analog and related component rules as separate layers.
 
-This structure lets Product Selector candidate data and Backend Catalog Matcher decisions use the correct filters for each product type. A pressure gauge, thermowell, pressure transducer, and hydrofilling service-position must not share one universal parameter set.
+This structure lets Product Selector candidate data and Backend Catalog Matcher decisions use the correct filters for each product type. A pressure gauge, thermowell, pressure transducer, solenoid valve, relay, thermomanometer, and hydrofilling service-position must not share one universal parameter set.
 
 ## Scope
 
@@ -30,7 +31,7 @@ Future manufacturers, such as Manotom, Fiztech, WIKA, Kabeltec, and others, must
 Known source classes for future import:
 
 - ROSMA price/catalog files with item rows and group/header rows;
-- stock files with catalog codes and stock or availability columns;
+- stock files with catalog codes, warehouse columns, and expected receipt columns;
 - analog tables;
 - naming/rule references for series, product types, options, and related components.
 
@@ -48,11 +49,12 @@ Catalog navigation and matching should follow this conceptual order:
 
 ```text
 Manufacturer
-  -> ProductFamily
-    -> ProductType
-      -> ProductTypeFilterProfile
-        -> Series / Model
-          -> CatalogItem / SKU
+  -> SourceHierarchy
+    -> ProductFamily
+      -> ProductType
+        -> ProductTypeFilterProfile
+          -> Series / Model
+            -> CatalogItem / SKU
 ```
 
 The filter profile controls which fields may be used for matching and UI filtering. Fields marked `not_applicable` for a product type must not be shown as UI filters for that product type and must not be required from Product Selector or Backend Catalog Matcher.
@@ -62,7 +64,9 @@ Examples:
 - `pressure_gauge` uses pressure measurement range, unit, thread, connection type, and accuracy class; `immersion_length` is not applicable.
 - `thermowell` uses compatible parent type/series, immersion length, stem diameter, thread or thread pair; `accuracy_class` is not applicable.
 - `pressure_transducer` requires `signal_output`; `pressure_gauge` must not require `signal_output`.
-- `service_position` such as hydrofilling does not have its own measurement range.
+- `thermomanometer` uses both pressure and temperature ranges; it must not be reduced to `pressure_gauge`.
+- `solenoid_valve` has valve function and coil/voltage fields; it must not be hidden inside generic `valve` without its own profile.
+- `service_position` such as hydrofilling does not have its own measurement range or own thread by default.
 
 ## Normalized Catalog Entities
 
@@ -79,6 +83,33 @@ Key fields:
 - `source_profile`
 - `status`
 
+### SourceHierarchy
+
+Purpose: preserves the source grouping structure from catalog files for audit, normalization, and repeatable parsing.
+
+The file `Все позиции РОСМА.xlsx` contains group/header rows and item rows. Group/header rows are not SKUs. Some product attributes can be derived from the source hierarchy, but those derived attributes must remain traceable.
+
+Key fields:
+
+- `source_hierarchy_path`
+- `parent_group_code`
+- `parent_group_name`
+- `top_group`
+- `is_group`
+- `is_catalog_item`
+- `source_row_kind`
+- `source_file_ref`
+- `source_sheet_name`
+- `source_row_number`
+
+Rules:
+
+- `source_hierarchy_path` must be preserved for audit and repeated normalization.
+- `is_group=true` rows are group/header rows and must not be treated as SKU/catalog item rows.
+- `is_catalog_item=true` rows can become catalog item candidates after product-type parsing and backend validation.
+- `source_row_kind` should distinguish `group_header`, `catalog_item`, `service_position`, `stock_item`, `analog_rule`, and `unknown_or_review_required`.
+- Import parser and Backend Catalog Matcher must keep hierarchy references when reporting candidate matches, warnings, and review reasons.
+
 ### ProductFamily
 
 Purpose: groups related product types under a manufacturer-specific family.
@@ -91,6 +122,7 @@ Key fields:
 - `display_name`
 - `source_group_name`
 - `normalized_group_name`
+- `source_hierarchy_path`
 
 ### ProductType
 
@@ -110,13 +142,30 @@ Example product types:
 - `pressure_gauge`
 - `vacuum_gauge`
 - `manovacuum_gauge`
+- `thermomanometer`
 - `bimetal_thermometer`
 - `thermowell`
 - `pressure_transducer`
+- `pressure_relay`
+- `temperature_relay`
 - `diaphragm_seal`
 - `bushing`
 - `valve`
+- `solenoid_valve`
 - `service_position`
+
+### ProductKind Vocabulary
+
+Allowed `product_kind` values are controlled:
+
+- `group`
+- `main_product`
+- `accessory`
+- `service_position`
+- `spare_part`
+- `related_component_candidate`
+
+Do not add `instrument` as a separate product kind. Products that are measuring instruments should normally use `main_product` plus a specific `product_type` such as `pressure_gauge`, `pressure_transducer`, `thermomanometer`, or `bimetal_thermometer`.
 
 ### Series
 
@@ -132,6 +181,7 @@ Key fields:
 - `source_series_name`
 - `series_options`
 - `supported_services`
+- `source_hierarchy_path`
 - `status`
 
 ### CatalogItem
@@ -154,6 +204,8 @@ Key fields:
 - `search_name`
 - `parameters`
 - `source_refs`
+- `source_hierarchy_path`
+- `source_row_kind`
 - `status`
 
 The `parameters` field is conceptually structured by ProductTypeFilterProfile. It is not a universal bag of every possible field.
@@ -183,10 +235,16 @@ A missing field is different from `not_applicable`:
 Potential parameter dimensions include:
 
 - `measurement_range`
+- `pressure_range`
+- `setpoint_range`
 - `range_from`
 - `range_to`
 - `range_unit`
+- `pressure_range_unit`
 - `temperature_range`
+- `temperature_from`
+- `temperature_to`
+- `temperature_unit`
 - `thread`
 - `thread_pair`
 - `connection`
@@ -194,6 +252,8 @@ Potential parameter dimensions include:
 - `process_connection`
 - `instrument_connection`
 - `accuracy_class`
+- `accuracy_class_pressure`
+- `accuracy_class_candidate`
 - `case_diameter`
 - `material`
 - `material_candidate`
@@ -204,9 +264,17 @@ Potential parameter dimensions include:
 - `stem_diameter`
 - `immersion_length`
 - `signal_output`
+- `contact_type`
+- `output_type`
+- `valve_type`
+- `valve_function`
+- `voltage_or_coil`
+- `port_or_dn_or_thread`
 - `pressure_limit`
+- `temperature_limit`
 - `protection_rating`
 - `medium`
+- `medium_candidate`
 - `hydrofilling_supported`
 - `service_type`
 - `quantity_policy`
@@ -226,7 +294,7 @@ Each `product_type` has its own applicable filter and parameter profile. The pro
 
 - `required` - required for reliable matching or import validation for this product type;
 - `optional` - can improve matching or filtering when present, but must not block all matching by itself;
-- `derived` - calculated or inferred by backend rules from source fields or related rules, not directly required from Product Selector;
+- `derived` - calculated or inferred by backend rules from source fields, source hierarchy, or related rules, not directly required from Product Selector;
 - `not_applicable` - must not be used as a UI filter and must not be required from Product Selector or Backend Catalog Matcher for this product type.
 
 Important rule: product-type profiles are mandatory. ArtCRM must not describe all catalog parameters as universal filters for all products.
@@ -238,13 +306,24 @@ Important rule: product-type profiles are mandatory. ArtCRM must not describe al
 | `pressure_gauge` / манометр | `measurement_range`, `range_unit`, `thread`, `connection_type`, `accuracy_class` | `case_diameter`, `material`, `execution`, `hydrofilling_supported`, `protection_rating`, `medium` | `range_from`, `range_to`, `product_kind`, `search_name` | `immersion_length`, `stem_diameter`, `signal_output` |
 | `vacuum_gauge` / вакуумметр | `measurement_range`, `range_unit`, `thread`, `connection_type`, `accuracy_class` | `case_diameter`, `material`, `execution` | `range_from`, `range_to`, `product_kind`, `search_name` | `immersion_length`, `stem_diameter`, `signal_output` |
 | `manovacuum_gauge` / мановакуумметр | `measurement_range` with negative and positive parts, `range_unit`, `thread`, `connection_type`, `accuracy_class` | `case_diameter`, `material`, `execution`, `hydrofilling_supported` only for supported series | `range_from`, `range_to`, `range_crosses_zero`, `product_kind`, `search_name` | `immersion_length`, `stem_diameter`, `signal_output` |
+| `thermomanometer` / термоманометр | `pressure_range`, `pressure_range_unit`, `temperature_range`, `temperature_unit`, `thread`, `connection_type`, `accuracy_class_pressure` or `accuracy_class_candidate` | `case_diameter`, `material`, `execution`, `protection_rating`, `medium` | `pressure_range_from`, `pressure_range_to`, `temperature_from`, `temperature_to`, `search_name`, `product_kind` | `signal_output`, `immersion_length` unless a specific thermomanometer subtype requires it |
 | `bimetal_thermometer` / термометр биметаллический | `temperature_range`, `thread`, `immersion_length` | `stem_diameter`, `accuracy_class`, `material`, `execution`, `compatible_thermowell_rule` | `temperature_from`, `temperature_to`, `thermowell_candidate_rule`, `search_name` | pressure `measurement_range`, `hydrofilling_supported`, `signal_output` |
 | `thermowell` / гильза | `compatible_parent_type`, `compatible_parent_series`, `immersion_length`, `stem_diameter`, `thread` or `thread_pair` | `material`, `pressure_limit`, `execution` | `compatible_parent_rule`, `search_name` | `measurement_range`, `accuracy_class`, `signal_output`, `hydrofilling_supported` |
 | `pressure_transducer` / датчик давления | `measurement_range`, `range_unit`, `thread`, `signal_output`, `accuracy_class` | `material`, `protection_rating`, `execution`, `medium` | `range_from`, `range_to`, `product_kind`, `search_name` | `case_diameter` as gauge case diameter, `immersion_length`, `stem_diameter` |
+| `pressure_relay` / реле давления | `pressure_range` or `setpoint_range`, `range_unit`, `connection`/`thread`, `contact_type` or `output_type` candidate | `material`, `protection_rating`, `execution`, `medium` | `range_from`, `range_to`, `search_name` | `accuracy_class` as gauge accuracy unless source explicitly provides it, `immersion_length`, `case_diameter` as gauge case diameter |
+| `temperature_relay` / реле температуры | `temperature_range` or `setpoint_range`, `temperature_unit`, `sensor`/`probe_type` if present | `connection`/`thread`, `immersion_length` if probe/stem subtype requires it, `contact_type`/`output_type`, `protection_rating`, `execution` | `temperature_from`, `temperature_to`, `search_name` | pressure `measurement_range` unless specific subtype requires it, gauge `accuracy_class`, `case_diameter` as pressure gauge diameter |
 | `diaphragm_seal` / разделитель сред | `process_connection`, `instrument_connection`, `material` or `material_candidate`, `compatible_parent_type` | `membrane_material`, `pressure_limit`, `medium`, `filling_liquid`, `assembly_service_required` | `compatibility_rule`, `service_requirements`, `search_name` | `accuracy_class` as direct item characteristic, `immersion_length` unless specific subtype requires it, `signal_output` |
 | `bushing` / бобышка | `thread`, `compatible_parent_type` | `material`, `execution`, `length`/`size` if present | `compatible_parent_rule`, `search_name` | `measurement_range`, `accuracy_class`, `signal_output`, `hydrofilling_supported` |
 | `valve` / кран / клапан | `valve_type`, `thread` or `connection`, `material` or `material_candidate` | `pressure_limit`, `execution` | `connection_normalized`, `search_name` | `measurement_range` as instrument range, `accuracy_class`, `immersion_length`, `signal_output` |
-| `service_position` / гидрозаполнение / сборка / заполнение | `service_type`, `parent_position_ref` or `parent_product_type`, `quantity_policy` | `fluid_type`, `parent_case_diameter`, `compatible_parent_series` | `quantity_candidate`, `service_display_name`, `search_name` | `measurement_range` as own range, `thread` as own connection unless service requires it, `accuracy_class` |
+| `solenoid_valve` / соленоидный клапан | `valve_function`, `voltage_or_coil`, `port_or_dn_or_thread`, `medium` or `medium_candidate` | `pressure_limit`, `material`, `execution`, `protection_rating`, `temperature_limit` | `normalized_connection`, `search_name`, `product_kind` | `measurement_range` as gauge range, `accuracy_class`, `immersion_length`, `signal_output` as sensor output |
+| `service_position` / гидрозаполнение / сборка / заполнение | `service_type`, `parent_position_ref` or `parent_product_type`, `quantity_policy` | `fluid_type`, `parent_case_diameter`, `compatible_parent_series` | `quantity_candidate`, `service_display_name`, `search_name` | `measurement_range` as own range, `thread` as own connection by default, `accuracy_class` |
+
+### Special Profile Rules
+
+- `thermomanometer` must not be modeled as a normal `pressure_gauge`, because it has two independent measurement circuits: pressure and temperature.
+- `solenoid_valve` must not be hidden in generic `valve` without its own profile, because coil/voltage and function are core matching fields.
+- `pressure_relay` and `temperature_relay` may share a future relay family in UI, but their matching fields remain product-type-specific.
+- For `service_position`, `thread` is `not_applicable` by default. A concrete service subtype may override this only through a subtype-specific profile. Hydrofilling has no own thread. Assembly or another service may have compatibility fields if the source requires them.
 
 ### ProductTypeFilterProfile JSON Examples
 
@@ -255,32 +334,10 @@ Important rule: product-type profiles are mandatory. ArtCRM must not describe al
   "profile_id": "rosma.pressure_gauge.v1",
   "manufacturer_scope": "ROSMA",
   "product_type": "pressure_gauge",
-  "required": [
-    "measurement_range",
-    "range_unit",
-    "thread",
-    "connection_type",
-    "accuracy_class"
-  ],
-  "optional": [
-    "case_diameter",
-    "material",
-    "execution",
-    "hydrofilling_supported",
-    "protection_rating",
-    "medium"
-  ],
-  "derived": [
-    "range_from",
-    "range_to",
-    "product_kind",
-    "search_name"
-  ],
-  "not_applicable": [
-    "immersion_length",
-    "stem_diameter",
-    "signal_output"
-  ],
+  "required": ["measurement_range", "range_unit", "thread", "connection_type", "accuracy_class"],
+  "optional": ["case_diameter", "material", "execution", "hydrofilling_supported", "protection_rating", "medium"],
+  "derived": ["range_from", "range_to", "product_kind", "search_name"],
+  "not_applicable": ["immersion_length", "stem_diameter", "signal_output"],
   "ui_filter_rule": "Do not show not_applicable fields as pressure gauge filters.",
   "matcher_rule": "Do not require signal_output, immersion_length, or stem_diameter for pressure gauges."
 }
@@ -293,29 +350,10 @@ Important rule: product-type profiles are mandatory. ArtCRM must not describe al
   "profile_id": "rosma.bimetal_thermometer.v1",
   "manufacturer_scope": "ROSMA",
   "product_type": "bimetal_thermometer",
-  "required": [
-    "temperature_range",
-    "thread",
-    "immersion_length"
-  ],
-  "optional": [
-    "stem_diameter",
-    "accuracy_class",
-    "material",
-    "execution",
-    "compatible_thermowell_rule"
-  ],
-  "derived": [
-    "temperature_from",
-    "temperature_to",
-    "thermowell_candidate_rule",
-    "search_name"
-  ],
-  "not_applicable": [
-    "measurement_range",
-    "hydrofilling_supported",
-    "signal_output"
-  ],
+  "required": ["temperature_range", "thread", "immersion_length"],
+  "optional": ["stem_diameter", "accuracy_class", "material", "execution", "compatible_thermowell_rule"],
+  "derived": ["temperature_from", "temperature_to", "thermowell_candidate_rule", "search_name"],
+  "not_applicable": ["measurement_range", "hydrofilling_supported", "signal_output"],
   "ui_filter_rule": "Use temperature and immersion filters, not pressure range filters.",
   "matcher_rule": "Do not require pressure measurement range or signal_output for bimetal thermometers."
 }
@@ -328,28 +366,10 @@ Important rule: product-type profiles are mandatory. ArtCRM must not describe al
   "profile_id": "rosma.thermowell.v1",
   "manufacturer_scope": "ROSMA",
   "product_type": "thermowell",
-  "required": [
-    "compatible_parent_type",
-    "compatible_parent_series",
-    "immersion_length",
-    "stem_diameter",
-    "thread_or_thread_pair"
-  ],
-  "optional": [
-    "material",
-    "pressure_limit",
-    "execution"
-  ],
-  "derived": [
-    "compatible_parent_rule",
-    "search_name"
-  ],
-  "not_applicable": [
-    "measurement_range",
-    "accuracy_class",
-    "signal_output",
-    "hydrofilling_supported"
-  ],
+  "required": ["compatible_parent_type", "compatible_parent_series", "immersion_length", "stem_diameter", "thread_or_thread_pair"],
+  "optional": ["material", "pressure_limit", "execution"],
+  "derived": ["compatible_parent_rule", "search_name"],
+  "not_applicable": ["measurement_range", "accuracy_class", "signal_output", "hydrofilling_supported"],
   "ui_filter_rule": "Thermowell filters are compatibility filters, not measuring instrument filters.",
   "matcher_rule": "Do not require accuracy_class for thermowells."
 }
@@ -362,32 +382,42 @@ Important rule: product-type profiles are mandatory. ArtCRM must not describe al
   "profile_id": "rosma.pressure_transducer.v1",
   "manufacturer_scope": "ROSMA",
   "product_type": "pressure_transducer",
-  "required": [
-    "measurement_range",
-    "range_unit",
-    "thread",
-    "signal_output",
-    "accuracy_class"
-  ],
-  "optional": [
-    "material",
-    "protection_rating",
-    "execution",
-    "medium"
-  ],
-  "derived": [
-    "range_from",
-    "range_to",
-    "product_kind",
-    "search_name"
-  ],
-  "not_applicable": [
-    "case_diameter",
-    "immersion_length",
-    "stem_diameter"
-  ],
+  "required": ["measurement_range", "range_unit", "thread", "signal_output", "accuracy_class"],
+  "optional": ["material", "protection_rating", "execution", "medium"],
+  "derived": ["range_from", "range_to", "product_kind", "search_name"],
+  "not_applicable": ["case_diameter", "immersion_length", "stem_diameter"],
   "ui_filter_rule": "Show signal_output for pressure transducers; do not show gauge case diameter as a required filter.",
   "matcher_rule": "signal_output is required for pressure transducer matching and not required for pressure gauges."
+}
+```
+
+#### thermomanometer
+
+```json
+{
+  "profile_id": "rosma.thermomanometer.v1",
+  "manufacturer_scope": "ROSMA",
+  "product_type": "thermomanometer",
+  "required": ["pressure_range", "pressure_range_unit", "temperature_range", "temperature_unit", "thread", "connection_type", "accuracy_class_pressure"],
+  "optional": ["case_diameter", "material", "execution", "protection_rating", "medium"],
+  "derived": ["pressure_range_from", "pressure_range_to", "temperature_from", "temperature_to", "search_name", "product_kind"],
+  "not_applicable": ["signal_output", "immersion_length"],
+  "matcher_rule": "Match pressure and temperature circuits independently; do not collapse thermomanometer into pressure_gauge."
+}
+```
+
+#### solenoid_valve
+
+```json
+{
+  "profile_id": "rosma.solenoid_valve.v1",
+  "manufacturer_scope": "ROSMA",
+  "product_type": "solenoid_valve",
+  "required": ["valve_function", "voltage_or_coil", "port_or_dn_or_thread", "medium_candidate"],
+  "optional": ["pressure_limit", "material", "execution", "protection_rating", "temperature_limit"],
+  "derived": ["normalized_connection", "search_name", "product_kind"],
+  "not_applicable": ["measurement_range", "accuracy_class", "immersion_length", "signal_output"],
+  "matcher_rule": "Do not hide solenoid valves in generic valve profile; coil/voltage is a required matching dimension."
 }
 ```
 
@@ -398,28 +428,12 @@ Important rule: product-type profiles are mandatory. ArtCRM must not describe al
   "profile_id": "rosma.service_position.v1",
   "manufacturer_scope": "ROSMA",
   "product_type": "service_position",
-  "required": [
-    "service_type",
-    "parent_position_ref_or_parent_product_type",
-    "quantity_policy"
-  ],
-  "optional": [
-    "fluid_type",
-    "parent_case_diameter",
-    "compatible_parent_series"
-  ],
-  "derived": [
-    "quantity_candidate",
-    "service_display_name",
-    "search_name"
-  ],
-  "not_applicable": [
-    "measurement_range",
-    "thread",
-    "accuracy_class"
-  ],
-  "ui_filter_rule": "Service positions are filtered by service type and parent compatibility, not by their own measurement range.",
-  "matcher_rule": "Do not require measurement_range or accuracy_class for hydrofilling, assembly, or filling service positions."
+  "required": ["service_type", "parent_position_ref_or_parent_product_type", "quantity_policy"],
+  "optional": ["fluid_type", "parent_case_diameter", "compatible_parent_series"],
+  "derived": ["quantity_candidate", "service_display_name", "search_name"],
+  "not_applicable": ["measurement_range", "thread", "accuracy_class"],
+  "subtype_override_rule": "thread is not_applicable by default; a service subtype may override this only through a subtype-specific profile.",
+  "matcher_rule": "Do not require measurement_range, own thread, or accuracy_class for hydrofilling, assembly, or filling service positions by default."
 }
 ```
 
@@ -430,19 +444,58 @@ Stock and availability must be stored separately from `CatalogItem`.
 Purpose:
 
 - keep catalog identity stable even when stock changes;
-- support multiple stock sources or dates;
-- avoid using stock columns as product identity.
+- support multiple stock sources, warehouses, and future receipts;
+- avoid using stock columns as product identity;
+- keep stock data outside Product Selector output.
 
 Conceptual fields:
 
 - `stock_record_id`
-- `catalog_item_ref`
-- `source_file_ref`
-- `stock_quantity_candidate`
-- `reserved_quantity_candidate`
-- `availability_status`
-- `stock_date`
+- `catalog_item_id`
+- `warehouse_code`
+- `warehouse_name`
+- `available_qty`
+- `reserved_qty`
+- `expected_receipts[]`
+- `expected_receipts[].date`
+- `expected_receipts[].qty`
+- `expected_receipts[].source_column`
+- `stock_updated_at` or `source_effective_date`
+- `source_warehouse_column`
+- `source_reference`
 - `normalization_status`
+
+Rules:
+
+- one catalog item may have multiple stock records;
+- multiple stock records may represent different warehouses, dates, or source columns;
+- stock records are not part of Product Selector output;
+- stock records must not be the only description of a product;
+- stock records must reference a catalog item candidate or validated catalog item.
+
+Example StockRecord:
+
+```json
+{
+  "catalog_item_id": "00000000000",
+  "warehouse_code": "rosma_spb",
+  "warehouse_name": "Основной склад РОСМА (СПб)",
+  "available_qty": 12,
+  "reserved_qty": 0,
+  "expected_receipts": [
+    {
+      "date": "2026-05-10",
+      "qty": 5,
+      "source_column": "expected_receipt_1"
+    }
+  ],
+  "stock_updated_at": "2026-04-27",
+  "source_reference": {
+    "file_name": "Остатки 27.04.26г.xlsx",
+    "source_row": 123
+  }
+}
+```
 
 ## Analog Layer
 
@@ -494,6 +547,7 @@ Backend Catalog Matcher is a backend-only service. Conceptually it should:
 - apply the correct ProductTypeFilterProfile;
 - reject filters marked `not_applicable` for the product type;
 - preserve missing required fields as `needs_review` instead of inventing values;
+- keep stock and availability separate from identity matching;
 - return candidate matches, rejected matches, warnings, and review reasons;
 - never calculate prices, VAT, totals, documents, or 1C exchange values unless a later separate task explicitly defines that flow.
 
