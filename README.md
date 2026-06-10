@@ -27,6 +27,7 @@ This pilot setup intentionally does not include business logic. It only defines 
 - [Product Selector Related Component Rules](docs/PRODUCT_SELECTOR_RELATED_COMPONENTS.md)
 - [Catalog Data Model](docs/CATALOG_MODEL.md)
 - [Catalog Source Mapping](docs/CATALOG_SOURCE_MAPPING.md)
+- [ROSMA Catalog Import Plan](docs/ROSMA_CATALOG_IMPORT_PLAN.md)
 
 ## Configuration
 
