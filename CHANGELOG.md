@@ -24,3 +24,4 @@ All notable changes to this project will be documented in this file.
 - Added ART-CATALOG-003 Backend Catalog Matcher design documentation.
 - Added ART-CATALOG-004 Backend Catalog Matcher API and DTO contract documentation.
 - Added ART-CATALOG-005 Catalog and Matcher database model design documentation.
+- Added ART-CATALOG-006 backend implementation foundation for catalog and matcher modules.
