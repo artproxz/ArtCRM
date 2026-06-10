@@ -57,7 +57,7 @@ The fixture JSON is intentionally an evaluation artifact, not an API implementat
 
 ## Coverage Summary
 
-The first fixture set includes 23 synthetic cases covering:
+The first fixture set includes 26 synthetic cases covering:
 
 - pressure gauge / манометр;
 - vacuum gauge / вакуумметр;
@@ -75,6 +75,7 @@ The first fixture set includes 23 synthetic cases covering:
 - dirty client-style wording;
 - missing thread;
 - missing accuracy class;
+- missing thermometer immersion length;
 - conflicting range or unit;
 - requested analog;
 - accessories already present in the request;
@@ -96,15 +97,11 @@ The fixtures cover recommendation behavior for:
 
 Every related component suggestion must include a parent position reference, reason, quantity policy, confirmation flag, and backend validation flag. Product Selector can recommend these items, but it cannot add them as confirmed RequestPositions, commercial proposal lines, invoice lines, or PDF lines.
 
-## Duplicate Suppression
-
-Duplicate suppression is expected when the source request already includes a related component. The fixture set includes cases where bushing, thermowell, hydrofilling, and three-way valve are already present.
-
-If a related component is present but conflicts with the parent parameters, the expected behavior is not to duplicate it. The Product Selector should mark a warning or review requirement so backend validation and a manager can resolve the conflict.
-
 ## Hydrofilling as Service-Position
 
 Hydrofilling is represented as a separate related service-position, not only as a note inside the parent pressure gauge.
+
+Positive hydrofilling fixtures must use hydrofillable ROSMA series 20 or 21, such as `ТМ-520Р` or `ТМ-521Р`. Series 10 / general-purpose `ТМ-510Р` is covered by a negative fixture and must not produce a valid ready recommendation for hydrofilling.
 
 Default behavior:
 
@@ -112,11 +109,60 @@ Default behavior:
 - the recommendation keeps a parent position reference;
 - manager or customer confirmation is required;
 - backend validation is mandatory;
+- if fluid type is `глицерин`, the expected service-position text is `Гидрозаполнение глицерином для манометра диам.100 — N шт.`;
+- if fluid type is `силикон`, the expected service-position text is `Гидрозаполнение силиконом для манометра диам.100 — N шт.`;
 - if fluid type is missing, the expected `question_to_manager` is: `Уточнить тип гидрозаполнения: глицерин или силикон?`.
 
-Example expected recommendation text:
+If a customer asks for hydrofilling on `ТМ-510Р` / series 10, the expected behavior is:
 
-`Гидрозаполнение глицерином для манометра диам.100 — 5 шт.`
+- no valid service-position recommendation;
+- `expected_needs_review=true`;
+- warning `hydrofilling_not_supported_for_series_10`;
+- manager clarification asking to check the series or vibration-resistant execution;
+- no silent parent model change from `ТМ-510Р` to `ТМ-520Р` or `ТМ-521Р`.
+
+## Thermowell Selection
+
+Thermowell suggestions are not based only on whether a thermometer is `211` or `220`. They are candidate recommendations built from explicit product parameters and must remain subject to backend validation and confirmation.
+
+Thermowell selection must consider:
+
+- thermometer series: `211`, `220`, `ТТ-В`, or `РТ-1`;
+- immersion length `L`;
+- thermowell diameter `d`;
+- connection type;
+- material.
+
+Fixture rules:
+
+- thermowell `L` must equal the thermometer immersion length;
+- if `L` is missing, a confident thermowell recommendation is not allowed;
+- for series `211`, expected `d=10` and an outer thread such as `G1/2` or `M20x1,5`;
+- for series `220`, expected `d=14` by default or `d=16` for 60 MPa, and a thread pair such as `G1/2-G1/2`;
+- for `ТТ-В`, expected `d=10`;
+- for `РТ-1`, expected `d=15` and only `L=125`.
+
+The fixture `psf-004-bimetal-thermometer-related-components` keeps a thermowell recommendation for `БТ-51.211` because the input contains `L=64` and no separate thermowell line. The expected candidate is:
+
+`Гильза для термометра xx.211 L=64мм, d=10, G1/2, нерж. Китай`
+
+The fixture `psf-020-thermowell-already-present` suppresses a duplicate thermowell recommendation because a thermowell is already explicitly present in the request.
+
+The fixture `psf-026-thermometer-missing-immersion-length` expects `needs_review=true`, `missing_fields` containing `length` / `immersion_length`, and this manager question:
+
+`Уточнить длину погружной части термометра для подбора гильзы.`
+
+## Duplicate Suppression
+
+Duplicate suppression is expected when the source request already includes a related component. The fixture set includes cases where bushing, thermowell, hydrofilling, and three-way valve are already present.
+
+If a related component is present but conflicts with the parent parameters, the expected behavior is not to duplicate it. The Product Selector should mark a warning or review requirement so backend validation and a manager can resolve the conflict.
+
+## Thread Normalization
+
+Normalized thread output must use Latin letters for thread notation. For example, even if source text contains Cyrillic `М20х1,5`, expected normalized values use `M20x1,5`.
+
+Fixture `psf-012-loop-tube-thread-normalization` checks that `rosma_model_candidate`, `structured_intent.connection`, and `must_have[]` use Latin `M` and `x`.
 
 ## Future Runner Boundary
 
