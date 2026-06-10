@@ -43,6 +43,13 @@ Conceptual classification fields:
 - `raw_name`
 - `raw_code`
 - `raw_group_path`
+- `source_hierarchy_path`
+- `parent_group_code`
+- `parent_group_name`
+- `top_group`
+- `is_group`
+- `is_catalog_item`
+- `source_row_kind`
 - `row_class`
 - `manufacturer_candidate`
 - `product_family_candidate`
@@ -51,20 +58,36 @@ Conceptual classification fields:
 - `classification_confidence`
 - `classification_warnings`
 
+Group/header rows from `Все позиции РОСМА.xlsx` are not SKUs. The parser must preserve `source_hierarchy_path` because some product attributes can be derived from group context and because audit/re-normalization depends on the original hierarchy.
+
+## ProductKind Vocabulary
+
+Allowed `product_kind` values are:
+
+- `group`
+- `main_product`
+- `accessory`
+- `service_position`
+- `spare_part`
+- `related_component_candidate`
+
+Do not use `instrument` as a separate `product_kind`. Measuring instruments are represented as `product_kind=main_product` with a specific `product_type` such as `pressure_gauge`, `pressure_transducer`, `thermomanometer`, or `bimetal_thermometer`.
+
 ## Product-Type-Specific Parsing Profiles
 
 The parser must apply different parsing profiles by `product_type`. The pipeline should be:
 
 1. normalize source text for safe parsing;
 2. classify row as group, item, service, stock, analog, or unknown;
-3. determine manufacturer scope;
-4. determine product family;
-5. determine `product_type` and `product_kind`;
-6. load the matching ProductTypeFilterProfile from [Catalog Data Model](CATALOG_MODEL.md);
-7. extract only fields that are required, optional, or derived for that product type;
-8. mark missing required fields as review issues;
-9. ignore or reject fields that are `not_applicable` for that product type;
-10. emit normalized candidate records for backend validation.
+3. preserve normalized source hierarchy fields;
+4. determine manufacturer scope;
+5. determine product family;
+6. determine `product_type` and `product_kind`;
+7. load the matching ProductTypeFilterProfile from [Catalog Data Model](CATALOG_MODEL.md);
+8. extract only fields that are required, optional, or derived for that product type;
+9. mark missing required fields as review issues;
+10. ignore or reject fields that are `not_applicable` for that product type;
+11. emit normalized candidate records for backend validation.
 
 Important examples:
 
@@ -72,7 +95,9 @@ Important examples:
 - `bimetal_thermometer` may parse `temperature_range`, `thread`, and `immersion_length`; it must not use pressure `measurement_range` or `hydrofilling_supported` as direct filters.
 - `thermowell` must parse compatibility fields such as `compatible_parent_series`, `immersion_length`, `stem_diameter`, and `thread` or `thread_pair`; it must not require `accuracy_class`.
 - `pressure_transducer` must parse `signal_output`; a pressure gauge must not require `signal_output`.
-- `service_position` such as hydrofilling must parse `service_type`, parent reference/type, and `quantity_policy`; it must not require its own measurement range.
+- `thermomanometer` must parse both pressure and temperature ranges; it must not be treated as a normal pressure gauge.
+- `solenoid_valve` must parse valve function, coil/voltage, port/DN/thread, and medium; it must not be hidden in generic valve parsing.
+- `service_position` such as hydrofilling must parse `service_type`, parent reference/type, and `quantity_policy`; it must not require its own measurement range or own thread by default.
 
 ## Mapping Profiles
 
@@ -149,6 +174,36 @@ Must not extract as required filters:
 - `stem_diameter`
 - `signal_output`
 
+### thermomanometer
+
+Parsing profile should extract two independent measurement circuits:
+
+- `series_code`
+- `model_code`
+- `pressure_range`
+- `pressure_range_from`
+- `pressure_range_to`
+- `pressure_range_unit`
+- `temperature_range`
+- `temperature_from`
+- `temperature_to`
+- `temperature_unit`
+- `thread`
+- `connection_type`
+- `accuracy_class_pressure` or `accuracy_class_candidate`
+- optional `case_diameter`
+- optional `material`
+- optional `execution`
+- optional `protection_rating`
+- optional `medium`
+
+Must not extract as required filters:
+
+- `signal_output`
+- `immersion_length` unless a specific thermomanometer subtype requires it
+
+Thermomanometers must not be normalized as plain `pressure_gauge` rows because pressure and temperature ranges are independent matching dimensions.
+
 ### bimetal_thermometer
 
 Parsing profile should extract:
@@ -223,6 +278,52 @@ Must not extract as required filters:
 - `immersion_length`;
 - `stem_diameter`.
 
+### pressure_relay
+
+Parsing profile should extract:
+
+- `series_code`
+- `model_code`
+- `pressure_range` or `setpoint_range`
+- `range_from`
+- `range_to`
+- `range_unit`
+- `connection` or `thread`
+- `contact_type` or `output_type` candidate
+- optional `material`
+- optional `protection_rating`
+- optional `execution`
+- optional `medium`
+
+Must not extract as required filters:
+
+- gauge `accuracy_class` unless source explicitly provides it;
+- `immersion_length`;
+- `case_diameter` as gauge case diameter.
+
+### temperature_relay
+
+Parsing profile should extract:
+
+- `series_code`
+- `model_code`
+- `temperature_range` or `setpoint_range`
+- `temperature_from`
+- `temperature_to`
+- `temperature_unit`
+- `sensor_type` or `probe_type` if present
+- optional `connection` or `thread`
+- optional `immersion_length` if probe/stem subtype requires it
+- optional `contact_type` or `output_type`
+- optional `protection_rating`
+- optional `execution`
+
+Must not extract as required filters:
+
+- pressure `measurement_range` unless a specific subtype requires it;
+- gauge `accuracy_class`;
+- `case_diameter` as pressure gauge diameter.
+
 ### diaphragm_seal
 
 Parsing profile should extract:
@@ -277,6 +378,35 @@ Must not extract as required filters:
 - `immersion_length`;
 - `signal_output`.
 
+### solenoid_valve
+
+Parsing profile should extract:
+
+- `valve_function`
+- `voltage_or_coil`
+- `port_or_dn_or_thread`
+- `medium` or `medium_candidate`
+- optional `pressure_limit`
+- optional `material`
+- optional `execution`
+- optional `protection_rating`
+- optional `temperature_limit`
+
+Derived fields:
+
+- `normalized_connection`
+- `search_name`
+- `product_kind`
+
+Must not extract as required filters:
+
+- `measurement_range` as gauge range;
+- `accuracy_class`;
+- `immersion_length`;
+- `signal_output` as sensor output.
+
+Solenoid valves must not be normalized as generic `valve` rows without preserving `product_type=solenoid_valve`.
+
 ### service_position
 
 Parsing profile should extract:
@@ -288,11 +418,18 @@ Parsing profile should extract:
 - optional `parent_case_diameter`
 - optional `compatible_parent_series`
 
-Must not extract as required filters:
+Must not extract as required filters by default:
 
 - `measurement_range` as own range;
-- `thread` as own connection unless the service subtype requires it;
+- `thread` as own connection;
 - `accuracy_class`.
+
+Service-position thread rule:
+
+- `thread` is `not_applicable` by default for `service_position`;
+- a concrete service subtype may override this only through a subtype-specific profile;
+- hydrofilling has no own thread;
+- assembly or another service may have compatibility fields if required by the source.
 
 Hydrofilling examples:
 
@@ -310,6 +447,13 @@ Hydrofilling examples:
   "raw_code": "source-code-candidate",
   "raw_name": "source item name",
   "raw_group_path": ["manufacturer group", "product family group"],
+  "source_hierarchy_path": ["top group", "child group"],
+  "parent_group_code": "group-code-candidate",
+  "parent_group_name": "parent group name",
+  "top_group": "top group name",
+  "is_group": false,
+  "is_catalog_item": true,
+  "source_row_kind": "catalog_item",
   "raw_columns": {
     "demo_column": "demo value"
   },
@@ -325,7 +469,7 @@ Hydrofilling examples:
   "manufacturer": "ROSMA",
   "product_family": "pressure instruments",
   "product_type": "pressure_gauge",
-  "product_kind": "instrument",
+  "product_kind": "main_product",
   "series_code": "521",
   "model_code": "ТМ-521Р",
   "article": "candidate-article",
@@ -334,6 +478,8 @@ Hydrofilling examples:
   "normalized_name": "normalized item name",
   "display_name": "display item name",
   "search_name": "search optimized item name",
+  "source_hierarchy_path": ["Манометры", "ТМ-521"],
+  "source_row_kind": "catalog_item",
   "filter_profile_id": "rosma.pressure_gauge.v1",
   "parameters": {
     "measurement_range": "0-1MPa",
@@ -358,16 +504,52 @@ Hydrofilling examples:
 
 Stock rows should map to a separate stock/availability candidate, not mutate catalog identity.
 
+Stock mapping must support multi-warehouse values and expected future receipts from stock source columns.
+
+Conceptual fields:
+
+- `catalog_item_id`
+- `warehouse_code`
+- `warehouse_name`
+- `available_qty`
+- `reserved_qty`
+- `expected_receipts[]`
+- `expected_receipts[].date`
+- `expected_receipts[].qty`
+- `expected_receipts[].source_column`
+- `stock_updated_at` or `source_effective_date`
+- `source_warehouse_column`
+- `source_reference`
+
+Rules:
+
+- one catalog item can have multiple stock records;
+- stock records are not part of Product Selector output;
+- stock records must not be the only product description;
+- stock records must reference catalog identity through `catalog_item_id` or a validated catalog item candidate.
+
+Example StockRecord:
+
 ```json
 {
-  "source_file_ref": "stock-source-ref",
-  "source_row_number": 42,
-  "catalog_item_ref_candidate": "source-code-or-sku",
-  "stock_quantity_candidate": 12,
-  "reserved_quantity_candidate": 0,
-  "availability_status": "available_candidate",
-  "stock_date": "source-date-candidate",
-  "validation_required": true
+  "catalog_item_id": "00000000000",
+  "warehouse_code": "rosma_spb",
+  "warehouse_name": "Основной склад РОСМА (СПб)",
+  "available_qty": 12,
+  "reserved_qty": 0,
+  "expected_receipts": [
+    {
+      "date": "2026-05-10",
+      "qty": 5,
+      "source_column": "expected_receipt_1"
+    }
+  ],
+  "stock_updated_at": "2026-04-27",
+  "source_warehouse_column": "warehouse_spb_available",
+  "source_reference": {
+    "file_name": "Остатки 27.04.26г.xlsx",
+    "source_row": 123
+  }
 }
 ```
 
@@ -430,6 +612,7 @@ Future Backend Catalog Matcher should consume only backend-validated catalog can
 Matcher input should include:
 
 - `product_type`
+- `product_kind`
 - `filter_profile_id`
 - candidate required fields for that product type;
 - optional fields when available;
@@ -442,8 +625,10 @@ The matcher must reject attempts to use `not_applicable` fields as required filt
 
 - do not require `immersion_length` for `pressure_gauge`;
 - do not require `accuracy_class` for `thermowell`;
-- do not require `measurement_range` as own range for `service_position`;
-- do require `signal_output` for `pressure_transducer`, but do not require it for `pressure_gauge`.
+- do not require `measurement_range` or own `thread` for `service_position` by default;
+- do require `signal_output` for `pressure_transducer`, but do not require it for `pressure_gauge`;
+- do not collapse `thermomanometer` into `pressure_gauge`;
+- do not collapse `solenoid_valve` into generic `valve`.
 
 ## Deferred Implementation
 
