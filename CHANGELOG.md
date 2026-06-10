@@ -20,3 +20,4 @@ All notable changes to this project will be documented in this file.
 - Added ART-AGENT-005 Product Selector ROSMA rulebook and related component suggestion rules.
 - Added ART-AGENT-006 Product Selector evaluation fixture documentation and synthetic fixture JSON.
 - Added ART-CATALOG-001 catalog data model and source mapping documentation with product-type-specific filter profiles.
+- Added ART-CATALOG-002 ROSMA catalog and daily stock import plan documentation.
