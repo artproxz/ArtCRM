@@ -18,3 +18,4 @@ All notable changes to this project will be documented in this file.
 - Added ART-AGENT-003 LLM-agent JSON schemas and backend-service DTO contract documentation.
 - Added ART-AGENT-004 Product Selector Agent quality evaluation plan documentation.
 - Added ART-AGENT-005 Product Selector ROSMA rulebook and related component suggestion rules.
+- Added ART-AGENT-006 Product Selector evaluation fixture documentation and synthetic fixture JSON.

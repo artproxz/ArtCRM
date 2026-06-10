@@ -1,6 +1,6 @@
 # Product Selector Agent Quality Evaluation Plan
 
-This document defines the documentation-only quality evaluation plan for the Product Selector Agent / CRM Position Intent Agent before backend integration. It does not modify the model, call Ollama, add backend code, add frontend code, create automated fixtures, add dependencies, or introduce real customer data.
+This document defines the documentation-only quality evaluation plan for the Product Selector Agent / CRM Position Intent Agent before backend integration. It does not modify the model, call Ollama, add backend code, add frontend code, create an evaluation runner, add dependencies, or introduce real customer data.
 
 ## Purpose
 
@@ -12,7 +12,7 @@ The Product Selector Agent already exists as local Ollama model logic, but the c
 - which mistakes are blocking;
 - when `needs_review` is required;
 - which pass/fail criteria are used;
-- how this plan can later become automated evaluation fixtures.
+- how fixture data can later become automated evaluation tests.
 
 The goal is not to approve the model automatically. The goal is to make quality review explicit before the agent can support RequestPosition parsing and Backend Catalog Matcher input.
 
@@ -28,6 +28,14 @@ Related existing model context:
 
 - Mail Reader Agent model: `artmatica-mail-reader-gemma:latest`.
 - Mail Reader Agent output may become context for Product Selector evaluation in future pipeline tests, but this document evaluates the Product Selector contract only.
+
+## Fixture Dataset
+
+Human-readable fixture documentation is defined in [Product Selector Evaluation Fixtures](PRODUCT_SELECTOR_FIXTURES.md).
+
+Machine-readable expected-output fixtures are stored in [product_selector_eval_fixtures.json](fixtures/product_selector_eval_fixtures.json).
+
+These fixtures are expected-output data only. They do not call Ollama, do not run `artmatica-product-selector-gemma:latest`, do not update a Modelfile, and do not implement assertion logic. An automated runner, model execution, result storage, and quality reporting are deferred to a separate future task.
 
 ## Expected Output Contract
 
@@ -130,8 +138,18 @@ Evaluation must cover at least these categories:
 
 - pressure gauge / манометр;
 - vacuum gauge / вакуумметр;
+- manovacuum gauge / мановакуумметр;
 - pressure transducer / датчик давления;
+- bimetal thermometer / термометр биметаллический;
+- diaphragm seal / разделитель сред;
 - accessories / доп. оборудование;
+- bushing / бобышка;
+- thermowell / гильза;
+- three-way valve / кран трехходовой;
+- needle valve / клапан игольчатый;
+- adapter / переходник;
+- loop tube / трубка петлевая;
+- hydrofilling as a separate service-position;
 - quantity and unit extraction;
 - ranges and units;
 - thread/connection parsing;
@@ -139,13 +157,14 @@ Evaluation must cover at least these categories:
 - material/execution/options parsing;
 - analog request detection;
 - ambiguous or incomplete product line;
-- forbidden mismatch detection.
+- forbidden mismatch detection;
+- related component duplicate suppression.
 
-Future automated fixtures should tag every test case with one or more categories so quality reports can show weakness by product family and field type.
+Automated fixtures should tag every test case with one or more categories so quality reports can show weakness by product family and field type.
 
 ## Rulebook and Related Component Fixture Coverage
 
-Future fixtures must also verify:
+Fixtures must verify:
 
 - ROSMA-only manufacturer scope for current Product Selector rulebook behavior;
 - future manufacturer extension boundary, including Manotomm, Fiztech, WIKA, Kabeltec, and other future adapters;
@@ -161,40 +180,40 @@ Future fixtures must also verify:
 - no related component recommendation when the parent series/execution does not support it;
 - Product Selector never adding related components to invoice, commercial proposal, PDF, or confirmed RequestPosition by itself.
 
-These checks remain future fixture requirements only. This task does not add fixture files or an evaluation runner.
+The initial fixture base for these checks is now documented in [Product Selector Evaluation Fixtures](PRODUCT_SELECTOR_FIXTURES.md) and stored as JSON in [product_selector_eval_fixtures.json](fixtures/product_selector_eval_fixtures.json). The runner that executes those fixtures remains a separate future task.
 
 ## Test Case Format
 
-Future fixtures can be derived from this structure:
+The machine-readable fixture format includes:
 
 ```json
 {
-  "case_id": "ps-eval-demo-001",
-  "categories": ["pressure_gauge", "range", "connection", "accuracy_class"],
-  "input": {
-    "source_text": "Synthetic product line only",
-    "context_refs": ["demo-mail-reader-output-ref"]
+  "id": "psf-demo-001",
+  "category": ["pressure_gauge", "range", "connection"],
+  "manufacturer_scope": "ROSMA",
+  "input_text": "Synthetic product line only",
+  "expected_output": {
+    "manufacturer_scope": "ROSMA",
+    "rosma_model_candidate": "candidate search text",
+    "structured_intent": {
+      "product_type": "pressure_gauge",
+      "range": "0-10 bar",
+      "connection": "G1/2",
+      "accuracy_class": "1.5",
+      "quantity": 2,
+      "unit": "pcs"
+    }
   },
-  "expected": {
-    "must_extract": {
-      "intent.product_type": "pressure_gauge",
-      "intent.range": "0-10 bar",
-      "intent.connection": "G1/2",
-      "intent.accuracy_class": "1.5",
-      "intent.quantity": 2,
-      "intent.unit": "pcs"
-    },
-    "must_not_include": ["catalog_item_id", "price", "vat", "model_path"],
-    "must_set_needs_clarification": false
-  },
-  "review": {
-    "human_review_required": false,
-    "critical_failure_if_wrong": ["intent.range", "intent.connection"]
-  }
+  "expected_related_component_suggestions": [],
+  "critical_fields": ["product_type", "range", "connection"],
+  "forbidden_actions": ["approve_catalog_item", "calculate_price"],
+  "expected_warnings": [],
+  "expected_needs_review": false,
+  "notes": "Synthetic expected candidate data only."
 }
 ```
 
-This is an example fixture shape only. This task does not add executable fixture files.
+The fixture file is not executable by itself. It becomes test input only when a future evaluation runner is implemented.
 
 ## Evaluation Examples
 
@@ -202,22 +221,22 @@ All examples are synthetic and must not be treated as real customer data.
 
 | Case | Category | Input line | Expected behavior |
 | --- | --- | --- | --- |
-| Clean line with all key parameters | pressure gauge / манометр | `Манометр 0-10 bar, G1/2, class 1.5, radial, stainless case, 2 pcs` | Extract product_type pressure_gauge, range `0-10 bar`, connection `G1/2`, accuracy `1.5`, execution `radial`, material hint, quantity `2`, unit `pcs`; no catalog approval. |
-| Dirty client-style line | pressure gauge / манометр | `Нужно пару манометров примерно до 10 бар, резьба кажется полдюйма, обычные, можно варианты` | Extract likely pressure_gauge and quantity `2`; mark uncertain thread/range normalization; `analog_request.allowed=true`; ask clarification if thread is not explicit. |
-| Line with missing thread | pressure transducer / датчик давления | `Датчик давления 0-16 bar, 4-20 mA, accuracy 0.5, 3 pcs` | Extract product_type pressure_transducer, range, output option, accuracy, quantity; set `needs_clarification=true` because connection/thread is missing. |
-| Line with conflicting range/unit | vacuum gauge / вакуумметр | `Вакуумметр -1..0 bar 0..10 bar G1/4 1 шт` | Detect conflicting ranges; add forbidden mismatch / validation hint; set `needs_clarification=true`; do not choose one range silently. |
-| Line requesting analog | pressure gauge / манометр | `Манометр 0-6 bar G1/2 class 1.5, если нет такого - предложите аналог` | Extract analog request allowed; keep original must-have fields; analog must remain explicitly marked for Backend Catalog Matcher. |
-| Accessory, not main product | accessories / доп. оборудование | `Сифонная трубка для манометра, G1/2, нержавейка, 5 шт` | Classify as accessory, not pressure gauge; extract connection/material/quantity; avoid main product assumptions. |
-| Needs review rather than inventing | ambiguous or incomplete product line | `Нужен датчик как в прошлый раз, 2 штуки` | Extract quantity only; mark product_type and critical fields unknown; set `needs_clarification=true`; ask questions; do not invent model, range, connection, or manufacturer. |
+| Clean line with all key parameters | pressure gauge / манометр | `Манометр 0-10 bar, G1/2, class 1.5, radial, stainless case, 2 pcs` | Extract pressure gauge, range, connection, accuracy, execution, material hint, quantity, and unit; no catalog approval. |
+| Dirty client-style line | pressure gauge / манометр | `Нужно пару манометров примерно до 10 бар, резьба кажется полдюйма, обычные, можно варианты` | Extract likely pressure gauge and quantity; mark uncertain thread/range normalization; detect analog permission; require review. |
+| Line with missing thread | pressure transducer / датчик давления | `Датчик давления 0-16 bar, 4-20 mA, accuracy 0.5, 3 pcs` | Extract product type, range, signal, accuracy, and quantity; set review because connection/thread is missing. |
+| Line with conflicting range/unit | vacuum gauge / вакуумметр | `Вакуумметр -1..0 bar 0..10 bar G1/4 1 шт` | Detect conflicting ranges; add forbidden mismatch; do not choose one range silently. |
+| Line requesting analog | pressure gauge / манометр | `Манометр 0-6 bar G1/2 class 1.5, если нет такого - предложите аналог` | Preserve original constraints and mark explicit analog request. |
+| Accessory, not main product | accessories / доп. оборудование | `Сифонная трубка для манометра, G1/2, нержавейка, 5 шт` | Classify as accessory, not pressure gauge. |
+| Needs review rather than inventing | ambiguous or incomplete product line | `Нужен датчик как в прошлый раз, 2 штуки` | Extract quantity only; set review; do not invent model, range, connection, or manufacturer. |
 
-Additional future examples should include mixed Cyrillic/Latin abbreviations, decimal separators, MPa/bar/kPa conversion risks, axial/radial wording, explosion-proof options, manufacturer/model-like strings, related component recommendations, duplicate suppression, and hydrofilling as a service-position.
+The detailed ART-AGENT-006 fixture set expands these examples with related component suggestions, duplicate suppression, hydrofilling service-position behavior, and ROSMA-only scope checks.
 
 ## Pass Criteria
 
 A case passes when all applicable conditions are true:
 
-- Output is valid JSON in the shared LLM envelope.
-- Required envelope fields are present.
+- Output is valid JSON in the shared LLM envelope or in the documented fixture expected-output shape.
+- Required envelope or fixture fields are present.
 - Required Product Selector payload fields are present.
 - Critical fields that are explicit in the input are extracted correctly.
 - Missing critical fields are represented as unknown, clarification questions, or `needs_clarification=true`.
@@ -238,7 +257,7 @@ A case passes when all applicable conditions are true:
 A case fails when any of these conditions occur:
 
 - Output is not parseable JSON.
-- Shared envelope is missing or uses unsupported field names.
+- Shared envelope or fixture shape is missing required field names.
 - Product Selector payload omits required fields without marking review/clarification.
 - The agent fabricates missing manufacturer, model, range, connection, accuracy class, material, execution, or options.
 - The agent silently resolves contradictory ranges or units without review.
@@ -254,7 +273,7 @@ A case fails when any of these conditions occur:
 
 ## Quality Metrics
 
-Future quality reports should group metrics by `model_name`, `prompt_version`, `agent_version`, test category, and critical field.
+Future quality reports should group metrics by `model_name`, `prompt_version`, `agent_version`, fixture set version, test category, and critical field.
 
 Recommended metrics:
 
@@ -280,7 +299,7 @@ Recommended metrics:
 - Manager correction rate.
 - Overall fixture pass rate.
 
-Exact numeric thresholds are deferred until the first fixture set is approved by the product owner and technical reviewer.
+Exact numeric thresholds are deferred until the fixture set is approved by the product owner and technical reviewer.
 
 ## Human Review Rules
 
@@ -336,19 +355,19 @@ If a value is missing or uncertain, the output should use an unknown/empty candi
 - Without Backend Catalog Matcher, evaluation can only judge intent extraction quality, not final catalog matching.
 - The first fixture set needs product-owner review before numeric thresholds become binding.
 
-## Conversion to Automated Evaluation Fixtures
+## Conversion to Automated Evaluation Runner
 
-A later task can convert this plan into automated fixtures by:
+A later task can convert the fixture base into automated evaluation by:
 
-- creating fixture files with synthetic inputs and expected candidate JSON;
-- tagging each fixture with categories and critical fields;
-- adding expected pass/fail assertions for schema, field extraction, related recommendations, duplicate suppression, manufacturer scope, and non-fabrication;
+- reading [product_selector_eval_fixtures.json](fixtures/product_selector_eval_fixtures.json);
+- tagging each fixture by categories and critical fields;
+- calling `artmatica-product-selector-gemma:latest` through a controlled backend evaluation boundary;
+- validating schema, field extraction, related recommendations, duplicate suppression, manufacturer scope, and non-fabrication;
 - recording `model_name`, `prompt_version`, `agent_version`, and fixture set version;
-- running the model through a controlled backend evaluation runner;
 - storing raw output by reference and normalized output through AgentRun-like records;
 - producing quality reports by category and validation error code.
 
-That later task must still keep backend validation mandatory and must not allow Product Selector output to approve catalog items or related components directly.
+That later runner must still keep backend validation mandatory and must not allow Product Selector output to approve catalog items or related components directly.
 
 ## Acceptance Criteria Checklist
 
@@ -361,4 +380,4 @@ That later task must still keep backend validation mandatory and must not allow 
 - Product Selector is not allowed to calculate prices.
 - Product Selector is not allowed to fabricate missing critical parameters.
 - Product Selector is not allowed to apply ROSMA-only rules universally.
-- The plan can later be converted into automated evaluation fixtures.
+- Fixture documentation and JSON fixture data can later be converted into automated evaluation runner inputs.
