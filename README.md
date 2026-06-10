@@ -29,6 +29,7 @@ This pilot setup intentionally does not include business logic. It only defines 
 - [Catalog Source Mapping](docs/CATALOG_SOURCE_MAPPING.md)
 - [ROSMA Catalog Import Plan](docs/ROSMA_CATALOG_IMPORT_PLAN.md)
 - [Backend Catalog Matcher Design](docs/CATALOG_MATCHER.md)
+- [Backend Catalog Matcher API Contract](docs/CATALOG_MATCHER_API.md)
 
 ## Configuration
 
