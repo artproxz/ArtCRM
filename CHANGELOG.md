@@ -23,3 +23,4 @@ All notable changes to this project will be documented in this file.
 - Added ART-CATALOG-002 ROSMA catalog and daily stock import plan documentation.
 - Added ART-CATALOG-003 Backend Catalog Matcher design documentation.
 - Added ART-CATALOG-004 Backend Catalog Matcher API and DTO contract documentation.
+- Added ART-CATALOG-005 Catalog and Matcher database model design documentation.
