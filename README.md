@@ -36,6 +36,9 @@ This pilot setup intentionally does not include business logic. It only defines 
 - [Internal CRM Communication Center](docs/CRM_TASK_MESSENGER.md)
 - [Customer Marketplace Portal](docs/CUSTOMER_MARKETPLACE_PORTAL.md)
 - [Customer Organization Access](docs/CUSTOMER_ORGANIZATION_ACCESS.md)
+- [Staff Workspace and Request Pipeline](docs/STAFF_WORKSPACE_AND_PIPELINE.md)
+- [Notifications, Reminders and SLA Alerts](docs/NOTIFICATIONS_REMINDERS_SLA.md)
+- [CRM Analytics Dashboards](docs/CRM_ANALYTICS_DASHBOARDS.md)
 
 ## Backend Foundation
 
