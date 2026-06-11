@@ -31,3 +31,6 @@ All notable changes to this project will be documented in this file.
 - Added ART-CRM-001 internal CRM communication center, messenger and file attachments architecture documentation.
 - Added ART-MARKETPLACE-001 customer marketplace and KIP catalog portal architecture documentation.
 - Added ART-CUSTOMER-001 customer organization account and multi-user access architecture documentation.
+- Added ART-CRM-002 staff workspace, request pipeline and manager dashboard architecture documentation.
+- Added ART-NOTIFY-001 notification center, reminders and SLA alerts architecture documentation.
+- Added ART-ANALYTICS-001 CRM analytics and management dashboards architecture documentation.
