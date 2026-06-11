@@ -26,3 +26,4 @@ All notable changes to this project will be documented in this file.
 - Added ART-CATALOG-005 Catalog and Matcher database model design documentation.
 - Added ART-CATALOG-006 backend implementation foundation for catalog and matcher modules.
 - Added ART-CATALOG-007 backend boundary unit tests for imports, DTO contracts, and service placeholders.
+- Added ART-SEC-001 Security, RBAC and access-control architecture baseline documentation.
