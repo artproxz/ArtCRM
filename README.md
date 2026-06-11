@@ -32,6 +32,12 @@ This pilot setup intentionally does not include business logic. It only defines 
 - [Backend Catalog Matcher API Contract](docs/CATALOG_MATCHER_API.md)
 - [Catalog and Matcher Database Model](docs/CATALOG_DATABASE_MODEL.md)
 
+## Backend Foundation
+
+`backend/app/` contains placeholder module boundaries for catalog and matcher-related services: catalog, stock, pricing, delivery, supplier quotes, matcher, analogs, related components, and audit.
+
+These modules contain DTO and service boundary placeholders only. They do not implement business logic, persistence, external calls, API routes, pricing, email sending, catalog import, matching algorithms, or integrations.
+
 ## Configuration
 
 Copy `.env.example` to `.env` for local development configuration. The example file contains demo/dev-safe placeholder values only and must not be used as a real environment file with production secrets.
@@ -67,7 +73,7 @@ Planned stack for future implementation:
 - Local AI runtime: Ollama.
 - Integration layer: backend-only boundary for mail, 1C, Ollama, catalog matching, and secrets.
 
-Implementation of this stack is deferred to later tasks. This repository currently contains architecture documentation only.
+Implementation of this stack is deferred to later tasks. This repository currently contains architecture documentation and backend boundary placeholders only.
 
 ## Current Scope
 
@@ -77,4 +83,4 @@ Implementation of this stack is deferred to later tasks. This repository current
 
 ## Assumption
 
-This scaffold assumes the project has not selected backend, frontend, infrastructure, or deployment technologies yet.
+This scaffold assumes runtime implementations, persistence, integrations, and deployment details are deferred to explicit future tasks.
