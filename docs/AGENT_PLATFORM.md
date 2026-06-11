@@ -2,13 +2,15 @@
 
 This document fixes the ArtCRM agent platform boundaries before backend, FastAPI, Podman, PostgreSQL, and Redis implementation begins. It separates LLM agents from backend-only services and records that agents produce candidate data, while backend services and managers make final business decisions.
 
-Agent and backend-service JSON/DTO contracts are defined in [Agent JSON Schemas and DTO Contracts](AGENT_JSON_SCHEMAS.md). AgentRun audit and quality policy is defined in [AgentRun Schema and Quality Policy](AGENT_RUN.md). Product Selector quality evaluation is defined in [Product Selector Agent Quality Evaluation Plan](PRODUCT_SELECTOR_EVAL.md).
+Agent and backend-service JSON/DTO contracts are defined in [Agent JSON Schemas and DTO Contracts](AGENT_JSON_SCHEMAS.md). AgentRun audit and quality policy is defined in [AgentRun Schema and Quality Policy](AGENT_RUN.md). Product Selector quality evaluation is defined in [Product Selector Agent Quality Evaluation Plan](PRODUCT_SELECTOR_EVAL.md). Tender Reader mode and tender filtering rules are defined in [Tender Reader Rules](TENDER_READER_RULES.md).
 
 ## Core Rule
 
 LLM agents help extract, structure, explain, and draft text. They do not own final business truth.
 
 Backend services own validation, deterministic calculations, persistence boundaries, catalog matching decisions, document generation, integration calls, and audit trails. A manager may approve or reject candidate data through the frontend, but the backend enforces the rules.
+
+Tender Reader output is also candidate data only. Backend rules and manager review decide final tender keep/skip/escalate policy.
 
 ## Readiness Status
 
@@ -19,6 +21,8 @@ Existing / available but documented as contracts:
 
 Target / not implemented yet:
 
+- Tender Reader mode for Mail Reader Agent.
+- Future Tender Monitor Agent boundary.
 - Client Catalog Assistant.
 - Manager Catalog Assistant.
 - Response Draft Agent.
@@ -58,6 +62,55 @@ Not allowed:
 - Write to business tables.
 - Calculate prices, VAT, totals, or legal document values.
 - Create final invoices, commercial proposals, or PDFs.
+
+### Tender Reader Mode For Mail Reader Agent
+
+Readiness: target / documented mode, not implemented yet. Detailed rules are defined in [Tender Reader Rules](TENDER_READER_RULES.md).
+
+Purpose:
+
+- Process tender notification emails from a controlled tender folder or backend-provided input.
+- Extract candidate tender metadata.
+- Classify tender relevance as candidate `keep`, `skip`, `needs_review`, or `blocked_irrelevant`.
+- Explain why a tender is likely relevant, ambiguous, or irrelevant.
+- Produce manager questions and recommended next action.
+
+Allowed outputs:
+
+- Candidate tender metadata.
+- Candidate tender classification.
+- Product/category/manufacturer hints.
+- Buyer, platform, URL/ID, region, and deadline candidates.
+- Reason summary, matched rules, and source fragments.
+- Manager questions and recommended next action.
+
+Not allowed:
+
+- Make final keep/skip/escalate decision.
+- Submit tender bids.
+- Generate final bid/offer documents.
+- Generate КП, PDF, invoice, or 1C documents.
+- Calculate prices, VAT, totals, margin, or delivery.
+- Confirm SKU/catalog item.
+- Scrape tender sites.
+- Download tender documents.
+- Access mailbox credentials or secrets directly.
+- Trigger supplier quote, commercial offer, or document workflows without backend/manager action.
+
+Rules:
+
+- Tender Reader output is candidate data only.
+- Backend/rules/manager workflow owns final tender status.
+- Ambiguous cases should prefer `needs_review` over guessing.
+- Final tender participation decision is outside LLM ownership.
+
+### Future Tender Monitor Agent
+
+Readiness: future boundary / not implemented yet.
+
+Tender Reader mode may later become a separate Tender Monitor Agent if tender volume, platform coverage, deadline monitoring, scheduling, deduplication, document downloading, or filter complexity grows.
+
+Future Tender Monitor Agent would still not own final business truth. It must not submit bids, generate КП/PDF/1C documents, calculate prices, scrape platforms without an approved integration boundary, or bypass backend validation and manager review.
 
 ### CRM Position Intent Agent / Product Selector Agent
 
@@ -260,6 +313,8 @@ LLM agents may:
 - Extract candidate fields.
 - Suggest structure.
 - Suggest catalog search hints.
+- Extract tender metadata.
+- Suggest candidate tender classification.
 - Explain candidates.
 - Draft customer-facing text.
 - Draft manager-facing text.
@@ -269,6 +324,9 @@ LLM agents must not:
 
 - Save approved business data directly.
 - Make final catalog decisions.
+- Make final tender keep/skip/escalate decisions.
+- Scrape tender sites or download tender documents.
+- Submit bids.
 - Calculate financial values.
 - Validate legal requisites.
 - Generate final invoices, commercial proposals, or PDFs.
@@ -280,6 +338,7 @@ Backend services must:
 - Validate all agent outputs.
 - Decide whether data is approved, rejected, or needs review.
 - Own catalog matching and document generation boundaries.
+- Own final tender workflow state through rules and manager decisions.
 - Persist only validated/approved business data.
 - Record AgentRun audit trails.
 - Protect secrets and backend-only integrations.
@@ -287,9 +346,10 @@ Backend services must:
 Managers may:
 
 - Approve or reject candidate data.
+- Confirm, skip, or override candidate tender classification.
 - Choose among backend-validated catalog candidates.
 - Edit draft text before sending.
-- Decide when ambiguous positions remain in `needs_review`.
+- Decide when ambiguous positions or tenders remain in `needs_review`.
 
 ## Document and Invoice Generation Boundary
 
@@ -322,6 +382,8 @@ Positions with conflicts, critical mismatch, unresolved catalog match, or low-co
 
 Response Draft Agent may prepare only accompanying text, explanations, and clarification questions. It may not create final PDFs, calculate any financial/legal values, or send email directly.
 
+Tender Reader may not create final bid documents, quote documents, PDF/Excel exports, invoices, or 1C records.
+
 ## AgentRun Audit and Trace Boundary
 
 AgentRun is the single audit and trace contour for agent workflows. Full AgentRun schema, validation error taxonomy, prompt/model versioning, retry/fallback rules, and quality loop are defined in [AgentRun Schema and Quality Policy](AGENT_RUN.md).
@@ -329,6 +391,7 @@ AgentRun is the single audit and trace contour for agent workflows. Full AgentRu
 AgentRun records should be used for:
 
 - Mail Reader Agent runs.
+- Tender Reader mode runs.
 - CRM Position Intent Agent / Product Selector Agent runs.
 - Client Catalog Assistant runs when introduced.
 - Manager Catalog Assistant runs when introduced.
@@ -338,7 +401,7 @@ AgentRun records should be used for:
 AgentRun fields used by the platform:
 
 - `agent_name` and `agent_type` - agent identity for audit and reporting.
-- `agent_version` and `prompt_version` - versioning for quality comparisons.
+- `agent_version`, `mode`, `mode_version`, and `prompt_version` - versioning for quality comparisons.
 - `model_name` - configured Ollama/API model name, not a filesystem model path.
 - `model_provider` / `runtime` - runtime provider such as Ollama.
 - `input_hash` - hash of controlled backend input for traceability and deduplication.
@@ -346,11 +409,12 @@ AgentRun fields used by the platform:
 - `normalized_response` - backend-normalized candidate data.
 - `confidence` - agent-provided or backend-derived confidence marker.
 - `validation_errors` - schema, safety, business, or consistency validation errors.
+- `filter_version` - tender filtering rule version when Tender Reader mode is used.
 - `retry_count`, `review_decision`, and `review_comment` - quality loop and fallback trace fields.
 
 Security note:
 
-- AgentRun records must not expose secrets, mail credentials, tokens, private keys, full prompts with sensitive data, sensitive customer data, or model paths to the frontend.
+- AgentRun records must not expose secrets, mail credentials, tokens, private keys, full prompts with sensitive data, sensitive customer data, tender buyer data beyond policy, or model paths to the frontend.
 
 ## Deferred Implementation
 
@@ -363,3 +427,10 @@ This document does not add:
 - PostgreSQL or Redis configuration.
 - SQL, ORM, or migrations.
 - Runtime dependencies.
+- Email connector implementation.
+- Tender folder integration.
+- Tender-site scraping.
+- Tender platform integration.
+- Scheduler or backend jobs.
+- Ollama/model changes.
+- `.env.example` changes.
