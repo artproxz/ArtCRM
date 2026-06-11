@@ -39,6 +39,9 @@ This pilot setup intentionally does not include business logic. It only defines 
 - [Staff Workspace and Request Pipeline](docs/STAFF_WORKSPACE_AND_PIPELINE.md)
 - [Notifications, Reminders and SLA Alerts](docs/NOTIFICATIONS_REMINDERS_SLA.md)
 - [CRM Analytics Dashboards](docs/CRM_ANALYTICS_DASHBOARDS.md)
+- [Commercial Offer Lifecycle](docs/COMMERCIAL_OFFER_LIFECYCLE.md)
+- [Supplier Quote Workflow](docs/SUPPLIER_QUOTE_WORKFLOW.md)
+- [CRM Document Center](docs/CRM_DOCUMENT_CENTER.md)
 
 ## Backend Foundation
 
