@@ -28,3 +28,4 @@ All notable changes to this project will be documented in this file.
 - Added ART-CATALOG-007 backend boundary unit tests for imports, DTO contracts, and service placeholders.
 - Added ART-SEC-001 Security, RBAC and access-control architecture baseline documentation.
 - Added ART-SEC-002 customer authentication and guest cart access architecture documentation.
+- Added ART-CRM-001 internal CRM communication center, messenger and file attachments architecture documentation.
