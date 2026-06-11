@@ -31,6 +31,7 @@ This pilot setup intentionally does not include business logic. It only defines 
 - [Backend Catalog Matcher Design](docs/CATALOG_MATCHER.md)
 - [Backend Catalog Matcher API Contract](docs/CATALOG_MATCHER_API.md)
 - [Catalog and Matcher Database Model](docs/CATALOG_DATABASE_MODEL.md)
+- [Security, RBAC and Access Control Architecture](docs/SECURITY_RBAC_ARCHITECTURE.md)
 
 ## Backend Foundation
 
@@ -55,6 +56,7 @@ Ollama is configured through `OLLAMA_BASE_URL` and model name variables such as 
 - Never commit real tokens, passwords, API keys, mail credentials, database credentials, private keys, certificates, or model paths.
 - Do not print secrets in logs, UI output, documentation examples, pull request descriptions, or issue comments.
 - If a secret is accidentally committed, rotate it outside the repository and treat the repository value as compromised.
+- Security architecture baseline is documented in [Security, RBAC and Access Control Architecture](docs/SECURITY_RBAC_ARCHITECTURE.md); implementation is deferred to later tasks.
 
 ## Development Workflow
 
