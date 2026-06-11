@@ -34,6 +34,8 @@ This pilot setup intentionally does not include business logic. It only defines 
 - [Security, RBAC and Access Control Architecture](docs/SECURITY_RBAC_ARCHITECTURE.md)
 - [Customer Authentication and Guest Access](docs/CUSTOMER_AUTH_AND_GUEST_ACCESS.md)
 - [Internal CRM Communication Center](docs/CRM_TASK_MESSENGER.md)
+- [Customer Marketplace Portal](docs/CUSTOMER_MARKETPLACE_PORTAL.md)
+- [Customer Organization Access](docs/CUSTOMER_ORGANIZATION_ACCESS.md)
 
 ## Backend Foundation
 
@@ -61,6 +63,7 @@ Ollama is configured through `OLLAMA_BASE_URL` and model name variables such as 
 - Security architecture baseline is documented in [Security, RBAC and Access Control Architecture](docs/SECURITY_RBAC_ARCHITECTURE.md); implementation is deferred to later tasks.
 - Customer auth and guest access architecture is documented in [Customer Authentication and Guest Access](docs/CUSTOMER_AUTH_AND_GUEST_ACCESS.md); implementation is deferred to later tasks.
 - Internal CRM communication center, messenger, and attachments architecture is documented in [Internal CRM Communication Center](docs/CRM_TASK_MESSENGER.md); implementation is deferred to later tasks.
+- Customer marketplace portal and customer organization access architecture are documented in [Customer Marketplace Portal](docs/CUSTOMER_MARKETPLACE_PORTAL.md) and [Customer Organization Access](docs/CUSTOMER_ORGANIZATION_ACCESS.md); implementation is deferred to later tasks.
 
 ## Development Workflow
 
