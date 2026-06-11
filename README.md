@@ -18,6 +18,7 @@ This pilot setup intentionally does not include business logic. It only defines 
 - [API Contracts](docs/API_CONTRACTS.md)
 - [Request Lifecycle](docs/REQUEST_LIFECYCLE.md)
 - [Agent Platform](docs/AGENT_PLATFORM.md)
+- [Tender Reader Rules](docs/TENDER_READER_RULES.md)
 - [AgentRun Schema and Quality Policy](docs/AGENT_RUN.md)
 - [Agent JSON Schemas and DTO Contracts](docs/AGENT_JSON_SCHEMAS.md)
 - [Product Selector Evaluation Plan](docs/PRODUCT_SELECTOR_EVAL.md)
