@@ -34,3 +34,6 @@ All notable changes to this project will be documented in this file.
 - Added ART-CRM-002 staff workspace, request pipeline and manager dashboard architecture documentation.
 - Added ART-NOTIFY-001 notification center, reminders and SLA alerts architecture documentation.
 - Added ART-ANALYTICS-001 CRM analytics and management dashboards architecture documentation.
+- Added ART-QUOTE-001 commercial offer lifecycle and approval architecture documentation.
+- Added ART-SUPPLIER-001 supplier quote request and response workflow architecture documentation.
+- Added ART-DOCS-001 CRM document center and file lifecycle architecture documentation.
