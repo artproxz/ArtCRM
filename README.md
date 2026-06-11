@@ -38,6 +38,8 @@ This pilot setup intentionally does not include business logic. It only defines 
 
 These modules contain DTO and service boundary placeholders only. They do not implement business logic, persistence, external calls, API routes, pricing, email sending, catalog import, matching algorithms, or integrations.
 
+Backend boundary tests for these placeholders can be run with `python -m unittest discover`.
+
 ## Configuration
 
 Copy `.env.example` to `.env` for local development configuration. The example file contains demo/dev-safe placeholder values only and must not be used as a real environment file with production secrets.
