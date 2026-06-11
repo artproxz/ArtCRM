@@ -29,3 +29,5 @@ All notable changes to this project will be documented in this file.
 - Added ART-SEC-001 Security, RBAC and access-control architecture baseline documentation.
 - Added ART-SEC-002 customer authentication and guest cart access architecture documentation.
 - Added ART-CRM-001 internal CRM communication center, messenger and file attachments architecture documentation.
+- Added ART-MARKETPLACE-001 customer marketplace and KIP catalog portal architecture documentation.
+- Added ART-CUSTOMER-001 customer organization account and multi-user access architecture documentation.
