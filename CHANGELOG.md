@@ -37,3 +37,4 @@ All notable changes to this project will be documented in this file.
 - Added ART-QUOTE-001 commercial offer lifecycle and approval architecture documentation.
 - Added ART-SUPPLIER-001 supplier quote request and response workflow architecture documentation.
 - Added ART-DOCS-001 CRM document center and file lifecycle architecture documentation.
+- Added ART-AGENT-007 Tender Reader mode and tender filtering rules documentation.
