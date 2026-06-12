@@ -74,6 +74,23 @@ The following permission families are the baseline vocabulary for future impleme
 
 `counterparty.*` and `purchase.*` are included now because the next implementation group is expected to cover amoCRM counterparty import, counterparty search, enrichment, merge review, and purchase workflows.
 
+## Permission Naming Consistency Rule
+
+Any permission referenced in state machines, API contracts, service boundaries, workflow guards, or future backend tasks must exist in `docs/PERMISSION_MATRIX.md`.
+
+New permission names must not be introduced in other documents without adding them to the permission matrix first.
+
+If a workflow needs a new capability, the documentation update must include:
+
+- permission name;
+- entity;
+- action;
+- default role template values;
+- grant/revoke ability;
+- sensitivity;
+- audit requirement;
+- notes.
+
 ## Matrix Conventions
 
 Cell values:
@@ -156,13 +173,17 @@ Cell values:
 | `customer_organization.view_org` | CustomerOrganization | View org-shared context | No | No | No | No | Future explicit | No | No | Yes | Yes | Yes | Yes | Future, not MVP default. |
 | `customer_organization.invite_user` | CustomerOrganization | Invite org user | No | No | No | No | Future explicit | No | No | Yes | Yes | Yes | Yes | Deferred implementation. |
 | `counterparty.search` | Counterparty | Search counterparties | Explicit | Yes | Yes | Explicit | No | No | Scoped | Yes | Yes | Yes | Yes | Required for future ART-60+ work. |
+| `counterparty.update` | Counterparty | Update profile fields | Explicit | Explicit | Explicit | Explicit | No | No | Scoped | Yes | Yes | Yes | Yes | Can change CRM counterparty profile; must not silently overwrite imported or enriched data. |
+| `counterparty.merge_review` | Counterparty | Review/confirm duplicate merge candidate | Explicit | Explicit | Explicit | Explicit | No | No | Scoped | Yes | Yes | Yes | Yes | Duplicate merge must be manual/reviewable; preserve source refs and alias history. |
 | `counterparty.import_preview` | CounterpartyImport | Preview import | Explicit | Explicit | Explicit | No | No | No | Scoped | Yes | Yes | Yes | Yes | Preview does not mutate registry. |
 | `counterparty.import_apply` | CounterpartyImport | Apply validated import | No | Explicit | Explicit | No | No | No | Scoped | Yes | Yes | Yes | Yes | Import application is high risk. |
 | `counterparty.export` | Counterparty | Export counterparty data | No | Explicit | Explicit | No | No | No | No | Yes | Yes | Yes | Yes | Customer base leakage risk. |
-| `counterparty.enrichment_apply` | CounterpartyEnrichment | Apply enrichment changes | No | Explicit | Explicit | No | No | No | Scoped | Yes | Yes | Yes | Yes | Must be reviewable, no silent overwrite. |
+| `counterparty.enrichment_request` | CounterpartyEnrichment | Request/preview enrichment | Explicit | Explicit | Explicit | Explicit | No | No | Scoped | Yes | Yes | Yes | Yes | Preview only; no registry mutation. |
+| `counterparty.enrichment_apply` | CounterpartyEnrichment | Apply reviewed enrichment fields | No | Explicit | Explicit | Explicit | No | No | Scoped | Yes | Yes | Yes | Yes | Must not silently overwrite critical fields; requires audit and reviewer decision. |
 | `purchase.view` | Purchase | View purchases | Explicit | Explicit | Explicit | Explicit | No | No | Scoped | Yes | Yes | Yes | Yes | Purchase is not quote/request/supplier quote. |
 | `purchase.create` | Purchase | Create purchase draft | No | Explicit | Explicit | Explicit | No | No | Scoped | Yes | Yes | Yes | Yes | Future procurement workflow. |
 | `purchase.update` | Purchase | Update purchase | No | Explicit | Explicit | Explicit | No | No | Scoped | Yes | Yes | Yes | Yes | Requires state guards. |
+| `purchase.approve` | Purchase | Approve purchase | No | Explicit | Explicit | Explicit | No | No | No | Yes | Yes | Yes | Yes | Purchase approval is commercial-sensitive; required before ordered state if policy requires. |
 | `purchase.export` | Purchase | Export purchase data | No | Explicit | Explicit | No | No | No | No | Yes | Yes | Yes | Yes | Commercial-sensitive. |
 | `admin.users_manage` | User | Manage users/account states | Yes | Explicit | Explicit | Explicit | No | No | No | Yes | Yes | Yes | Yes | Manager/admin functions can be granted flexibly. |
 | `admin.permissions_manage` | Permission | Grant/revoke permissions | Yes | Explicit | Explicit | No | No | No | No | Yes | Yes | Yes | Yes | Every grant/revoke is audited. |
@@ -188,8 +209,9 @@ The following permissions or data views require explicit attention in backend im
 - Agent output acceptance: `agent.accept_output`.
 - Matcher override: `matcher.override_decision`.
 - Counterparty export: `counterparty.export`.
-- Counterparty enrichment apply: `counterparty.enrichment_apply`.
-- Purchase creation/update: `purchase.create`, `purchase.update`.
+- Counterparty profile update and duplicate merge review: `counterparty.update`, `counterparty.merge_review`.
+- Counterparty enrichment request/apply: `counterparty.enrichment_request`, `counterparty.enrichment_apply`.
+- Purchase creation/update/approval: `purchase.create`, `purchase.update`, `purchase.approve`.
 
 ## Object Ownership Rules
 
