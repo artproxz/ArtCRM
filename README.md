@@ -14,6 +14,7 @@ This pilot setup intentionally does not include business logic. It only defines 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
+- [Final Architecture Review](docs/FINAL_ARCHITECTURE_REVIEW.md)
 - [Domain Model](docs/DOMAIN_MODEL.md)
 - [API Contracts](docs/API_CONTRACTS.md)
 - [Request Lifecycle](docs/REQUEST_LIFECYCLE.md)
