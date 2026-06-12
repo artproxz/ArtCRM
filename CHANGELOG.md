@@ -39,3 +39,7 @@ All notable changes to this project will be documented in this file.
 - Added ART-DOCS-001 CRM document center and file lifecycle architecture documentation.
 - Added ART-AGENT-007 Tender Reader mode and tender filtering rules documentation.
 - Added ART-FINAL-ARCH-001 final architecture review before business implementation.
+- Added ART-IMPL-001 permission matrix and access-control implementation readiness documentation.
+- Added ART-IMPL-002 audit event taxonomy and event model implementation readiness documentation.
+- Added ART-IMPL-003 MVP workflow state machines and transition guards documentation.
+- Added ART-IMPL-004 MVP API contract readiness documentation.
