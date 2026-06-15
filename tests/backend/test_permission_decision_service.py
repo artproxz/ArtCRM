@@ -98,6 +98,7 @@ class PermissionDecisionServiceTests(unittest.TestCase):
         for actor_type, expected_reason in (
             (ActorType.UNKNOWN, PermissionDecisionReason.DENIED_UNKNOWN_ACTOR),
             (ActorType.ANONYMOUS, PermissionDecisionReason.DENIED_ANONYMOUS_ACTOR),
+            ("unexpected_actor_type", PermissionDecisionReason.DENIED_UNKNOWN_ACTOR),
         ):
             with self.subTest(actor_type=actor_type):
                 actor = ActorContext(
