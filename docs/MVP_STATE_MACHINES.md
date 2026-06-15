@@ -568,9 +568,9 @@ Allowed transitions:
 
 | From -> To | Initiator | Required permission | Audit event | SLA effect | Notification effect | Customer-visible status | Approval required |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `requested` -> `previewed` | service_actor | `counterparty.enrichment_apply` scoped/preview | `counterparty_enrichment.previewed` | None | Optional | Hidden/internal | No |
-| `previewed` -> `validated` | backend | scoped validation permission | `counterparty_enrichment.validated` | None | Optional | Hidden/internal | No |
-| `previewed`/`validated` -> `needs_review` | backend/manager | `counterparty.enrichment_apply` | `counterparty_enrichment.needs_review` | None | Review notification | Hidden/internal | No |
+| `requested` -> `previewed` | service_actor | `counterparty.enrichment_request` | `counterparty_enrichment.previewed` | None | Optional | Hidden/internal | No |
+| `previewed` -> `validated` | backend | scoped validation/service permission or `counterparty.enrichment_request` | `counterparty_enrichment.validated` | None | Optional | Hidden/internal | No |
+| `previewed`/`validated` -> `needs_review` | backend/manager | `counterparty.enrichment_request` | `counterparty_enrichment.needs_review` | None | Review notification | Hidden/internal | No |
 | `validated`/`needs_review` -> `applied` | manager | `counterparty.enrichment_apply` | `counterparty_enrichment.applied` | None | Applied notification | Hidden/internal | Yes |
 | active state -> `rejected` | manager | `counterparty.enrichment_apply` | `counterparty_enrichment.rejected` | None | Optional | Hidden/internal | Reason required |
 | active state -> `failed` | service_actor | scoped service permission | `counterparty_enrichment.failed` | None | Failure notification | Hidden/internal | No |
@@ -578,6 +578,7 @@ Allowed transitions:
 
 Forbidden transitions:
 
+- Enrichment preview/request cannot mutate active counterparty fields.
 - Enrichment cannot overwrite active counterparty fields silently.
 - Enrichment cannot create purchases or quotes.
 
@@ -606,7 +607,7 @@ Allowed transitions:
 | From -> To | Initiator | Required permission | Audit event | SLA effect | Notification effect | Customer-visible status | Approval required |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `draft` -> `internal_review` | manager | `purchase.create` / `purchase.update` | `purchase.created` or `purchase.state_changed` | None | Review notification | Hidden/internal | No |
-| `internal_review` -> `approved` | approver | purchase approval permission | `purchase.approved` | None | Approval notification | Hidden/internal | Yes |
+| `internal_review` -> `approved` | approver | `purchase.approve` | `purchase.approved` | None | Approval notification | Hidden/internal | Yes |
 | `approved` -> `ordered` | manager/service_actor | `purchase.update` | `purchase.ordered` | Procurement timer may start | Ordered notification | Hidden/internal | Yes if policy requires |
 | `ordered` -> `partially_received` | manager/service_actor | `purchase.update` | `purchase.partially_received` | May update procurement status | Notification optional | Hidden/internal | No |
 | `partially_received` -> `received` | manager/service_actor | `purchase.update` | `purchase.received` | Procurement timer ends | Received notification | Hidden/internal | No |
@@ -617,7 +618,7 @@ Forbidden transitions:
 
 - Purchase must not be confused with quote, request, or supplier quote.
 - Supplier quote response can support purchase context later but cannot create a confirmed purchase silently.
-- Purchase creation/update is commercial-sensitive and auditable.
+- Purchase creation/update/approval is commercial-sensitive and auditable.
 
 Rollback/reopen/cancel/archive rules:
 
@@ -633,5 +634,6 @@ Rollback/reopen/cancel/archive rules:
 - Request/customer-facing status may differ from internal status.
 - Counterparty import supports preview -> validated -> applied / failed / partially_applied.
 - Duplicate counterparty merge is manual/reviewable.
+- Counterparty enrichment preview/request does not mutate the registry; only `counterparty.enrichment_apply` can apply reviewed enrichment fields.
 - Purchase is separate from quote/request/supplier quote.
 - Backend owns transition guards; frontend never owns final state authority.
