@@ -85,17 +85,16 @@ class ApiError:
         object.__setattr__(self, "severity", _coerce_severity(self.severity))
         object.__setattr__(self, "details", freeze_safe_details(self.details))
 
-    def to_dict(self) -> Mapping[str, Any]:
-        payload = {
+    def to_dict(self) -> dict[str, Any]:
+        return {
             "code": self.code.value,
             "message": self.message,
-            "details": dict(self.details),
+            "details": thaw_for_json(self.details),
             "severity": self.severity.value,
             "retryable": self.retryable,
             "field": self.field,
             "entity_ref": self.entity_ref,
         }
-        return MappingProxyType(payload)
 
 
 def permission_denied_error(
@@ -216,6 +215,14 @@ def internal_error(
 
 def freeze_safe_details(details: Mapping[str, Any]) -> Mapping[str, Any]:
     return _deep_freeze(_sanitize_mapping(details))
+
+
+def thaw_for_json(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {key: thaw_for_json(inner_value) for key, inner_value in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [thaw_for_json(item) for item in value]
+    return value
 
 
 def _sanitize_mapping(details: Mapping[str, Any]) -> Mapping[str, Any]:
