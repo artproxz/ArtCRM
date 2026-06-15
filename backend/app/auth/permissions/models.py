@@ -48,7 +48,10 @@ class ActorContext:
 
     def __post_init__(self) -> None:
         if not isinstance(self.actor_type, ActorType):
-            object.__setattr__(self, "actor_type", ActorType(self.actor_type))
+            try:
+                object.__setattr__(self, "actor_type", ActorType(self.actor_type))
+            except ValueError:
+                object.__setattr__(self, "actor_type", ActorType.UNKNOWN)
 
         for attr in (
             "role_template_permissions",
