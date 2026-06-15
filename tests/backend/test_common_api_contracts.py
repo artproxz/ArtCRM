@@ -1,3 +1,4 @@
+import json
 import unittest
 from types import MappingProxyType
 
@@ -67,6 +68,21 @@ class CommonApiContractsTests(unittest.TestCase):
         self.assertEqual(meta.hidden_fields, ("supplier_response",))
         self.assertEqual(meta.warnings, ("partial_data",))
 
+    def test_response_meta_to_dict_returns_plain_dict_with_lists(self):
+        meta = ResponseMeta(
+            masked_fields=["margin"],
+            hidden_fields=["supplier_response"],
+            warnings=["partial_data"],
+        )
+
+        payload = meta.to_dict()
+
+        self.assertIsInstance(payload, dict)
+        self.assertNotIsInstance(payload, MappingProxyType)
+        self.assertEqual(payload["masked_fields"], ["margin"])
+        self.assertEqual(payload["hidden_fields"], ["supplier_response"])
+        self.assertEqual(payload["warnings"], ["partial_data"])
+
     def test_permission_denied_helper_returns_safe_error(self):
         error = permission_denied_error(permission="pricing.view_margin", field="margin")
 
@@ -76,6 +92,15 @@ class CommonApiContractsTests(unittest.TestCase):
         self.assertFalse(error.retryable)
         self.assertEqual(error.field, "margin")
         self.assertEqual(error.details["permission_required"], "pricing.view_margin")
+
+    def test_api_error_to_dict_returns_plain_dict(self):
+        error = permission_denied_error(permission="pricing.view_margin")
+
+        payload = error.to_dict()
+
+        self.assertIsInstance(payload, dict)
+        self.assertNotIsInstance(payload, MappingProxyType)
+        self.assertEqual(payload["code"], "permission_denied")
 
     def test_validation_error_helper_returns_validation_error(self):
         error = validation_error(field="email", details={"reason": "invalid_format"})
@@ -135,6 +160,68 @@ class CommonApiContractsTests(unittest.TestCase):
         self.assertEqual(error.details["nested"]["items"][0]["secret"], REDACTED_VALUE)
         with self.assertRaises(TypeError):
             error.details["safe"] = "blocked"
+
+    def test_api_error_to_dict_thaws_nested_details_to_plain_dict_and_list(self):
+        error = validation_error(
+            details={
+                "safe": "value",
+                "token": "demo-token",
+                "nested": {"items": [{"secret": "demo-secret"}]},
+            }
+        )
+
+        payload = error.to_dict()
+
+        self.assertIsInstance(payload, dict)
+        self.assertIsInstance(payload["details"], dict)
+        self.assertNotIsInstance(payload["details"], MappingProxyType)
+        self.assertIsInstance(payload["details"]["nested"], dict)
+        self.assertIsInstance(payload["details"]["nested"]["items"], list)
+        self.assertIsInstance(payload["details"]["nested"]["items"][0], dict)
+        self.assertEqual(payload["details"]["token"], REDACTED_VALUE)
+        self.assertEqual(payload["details"]["nested"]["items"][0]["secret"], REDACTED_VALUE)
+
+    def test_api_response_to_dict_returns_plain_dict(self):
+        response = success_response({"items": ("one", "two")}, meta=ResponseMeta(masked_fields=["margin"]))
+
+        payload = response.to_dict()
+
+        self.assertIsInstance(payload, dict)
+        self.assertNotIsInstance(payload, MappingProxyType)
+        self.assertIsInstance(payload["meta"], dict)
+        self.assertEqual(payload["data"]["items"], ["one", "two"])
+        self.assertEqual(payload["meta"]["masked_fields"], ["margin"])
+
+    def test_json_dumps_works_for_success_response_to_dict(self):
+        response = success_response({"items": ("one", "two")}, meta=ResponseMeta(warnings=["demo-warning"]))
+
+        encoded = json.dumps(response.to_dict())
+
+        self.assertIn('"success": true', encoded)
+        self.assertIn('"items": ["one", "two"]', encoded)
+
+    def test_json_dumps_works_for_error_response_with_nested_sanitized_details(self):
+        error = validation_error(
+            details={
+                "nested": {"token": "demo-token", "items": [{"password": "demo-password"}]},
+            }
+        )
+        response = error_response(error, meta=ResponseMeta(hidden_fields=["supplier_response"]))
+
+        encoded = json.dumps(response.to_dict())
+
+        self.assertIn('"success": false', encoded)
+        self.assertIn(REDACTED_VALUE, encoded)
+        self.assertNotIn("demo-token", encoded)
+        self.assertNotIn("demo-password", encoded)
+
+    def test_internal_error_to_dict_still_does_not_expose_raw_exception_text(self):
+        error = internal_error(exception=RuntimeError("raw secret exception text"))
+
+        payload = error.to_dict()
+
+        self.assertNotIn("raw secret exception text", str(payload))
+        self.assertEqual(payload["details"]["exception_type"], "RuntimeError")
 
     def test_idempotency_key_object_stores_key_safely(self):
         key = IdempotencyKey("  demo-key  ")
