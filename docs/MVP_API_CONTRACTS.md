@@ -504,10 +504,11 @@ Conceptual operations:
 | `view_counterparty_profile` | View counterparty profile. | `counterparty.search` or scoped customer permission | `counterparty.viewed` if sensitive. |
 | `update_counterparty_profile` | Update profile fields. | `counterparty.update` | `counterparty.updated`. |
 | `review_merge_candidate` | Review duplicate/merge candidate. | `counterparty.merge_review` | `counterparty.merge_candidate_reviewed`. |
-| `request_counterparty_enrichment` | Request enrichment preview. | `counterparty.enrichment_apply` preview scope | `counterparty_enrichment.previewed`. |
+| `request_counterparty_enrichment` | Request enrichment preview without registry mutation. | `counterparty.enrichment_request` | `counterparty_enrichment.previewed`. |
 | `apply_counterparty_enrichment` | Apply reviewed enrichment fields. | `counterparty.enrichment_apply` | `counterparty_enrichment.applied`. |
 | `list_purchases` | List purchase records by permission. | `purchase.view` | `purchase.viewed` if sensitive. |
 | `create_purchase_boundary` | Future purchase draft creation. | `purchase.create` | `purchase.created`. |
+| `approve_purchase_boundary` | Approve purchase draft/internal_review. | `purchase.approve` | `purchase.approved`. |
 
 Import apply DTO shape:
 
@@ -531,8 +532,10 @@ Rules:
 
 - Import preview must not mutate registry.
 - Duplicate merge must be manual/reviewable.
+- Enrichment request/preview uses `counterparty.enrichment_request` and must not mutate the registry.
 - Enrichment apply must not silently overwrite critical fields.
 - Counterparty export requires `counterparty.export`.
+- Purchase approval uses `purchase.approve` before `approved`/`ordered` flow when policy requires.
 - Purchase must not be confused with request, quote, or supplier quote.
 - No real customer/counterparty data is included in this document.
 
@@ -589,8 +592,8 @@ Idempotency keys are required for:
 - export quote;
 - publish/unpublish customer-visible document;
 - import apply;
-- enrichment apply;
-- purchase create/update;
+- enrichment request/apply;
+- purchase create/update/approval;
 - audit export.
 
 If the same `idempotency_key` is reused with a different payload, backend should return `idempotency_conflict`.
