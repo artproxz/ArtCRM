@@ -43,3 +43,7 @@ All notable changes to this project will be documented in this file.
 - Added ART-IMPL-002 audit event taxonomy and event model implementation readiness documentation.
 - Added ART-IMPL-003 MVP workflow state machines and transition guards documentation.
 - Added ART-IMPL-004 MVP API contract readiness documentation.
+- Added ART-CUSTOMER-002 counterparty registry and amoCRM company import architecture documentation.
+- Added ART-CUSTOMER-003 counterparty search, filters and profile architecture documentation.
+- Added ART-CUSTOMER-004 purchase records linked to counterparties architecture documentation.
+- Added ART-CUSTOMER-005 free counterparty enrichment and company lookup architecture documentation.
