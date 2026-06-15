@@ -114,6 +114,7 @@ class PermissionDecisionServiceTests(unittest.TestCase):
     def test_ownership_required_permission_allows_owner(self):
         actor = ActorContext(
             actor_type=ActorType.CUSTOMER_USER,
+            role_template_permissions={"request.edit"},
             owned_object_refs={"request:demo-owned"},
         )
 
@@ -129,9 +130,28 @@ class PermissionDecisionServiceTests(unittest.TestCase):
         self.assertTrue(decision.allowed)
         self.assertEqual(decision.reason_code, PermissionDecisionReason.ALLOWED_BY_OWNERSHIP)
 
-    def test_ownership_required_permission_denies_non_owner(self):
+    def test_owner_without_requested_permission_is_denied(self):
         actor = ActorContext(
             actor_type=ActorType.CUSTOMER_USER,
+            owned_object_refs={"request:demo-owned"},
+        )
+
+        decision = self.service.decide(
+            actor,
+            PermissionRequest(
+                permission="request.edit",
+                target_ref="request:demo-owned",
+                ownership_required=True,
+            ),
+        )
+
+        self.assertFalse(decision.allowed)
+        self.assertEqual(decision.reason_code, PermissionDecisionReason.DENIED_MISSING_PERMISSION)
+
+    def test_ownership_required_permission_denies_non_owner_with_permission(self):
+        actor = ActorContext(
+            actor_type=ActorType.CUSTOMER_USER,
+            role_template_permissions={"request.edit"},
             owned_object_refs={"request:other"},
         )
 
@@ -146,6 +166,26 @@ class PermissionDecisionServiceTests(unittest.TestCase):
 
         self.assertFalse(decision.allowed)
         self.assertEqual(decision.reason_code, PermissionDecisionReason.DENIED_OWNERSHIP_REQUIRED)
+
+    def test_explicit_revoke_overrides_permission_and_ownership(self):
+        actor = ActorContext(
+            actor_type=ActorType.CUSTOMER_USER,
+            role_template_permissions={"request.edit"},
+            explicit_revokes={"request.edit"},
+            owned_object_refs={"request:demo-owned"},
+        )
+
+        decision = self.service.decide(
+            actor,
+            PermissionRequest(
+                permission="request.edit",
+                target_ref="request:demo-owned",
+                ownership_required=True,
+            ),
+        )
+
+        self.assertFalse(decision.allowed)
+        self.assertEqual(decision.reason_code, PermissionDecisionReason.DENIED_EXPLICIT_REVOKE)
 
     def test_service_actor_allowed_inside_declared_scope(self):
         actor = ActorContext(
