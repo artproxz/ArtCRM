@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from types import MappingProxyType
-from typing import Any, Mapping, Optional, Tuple
+from typing import Any, Optional, Tuple
 
-from .errors import ApiError
+from .errors import ApiError, thaw_for_json
 
 
 def empty_tuple() -> Tuple[str, ...]:
@@ -28,18 +27,16 @@ class ResponseMeta:
         object.__setattr__(self, "hidden_fields", tuple(self.hidden_fields))
         object.__setattr__(self, "warnings", tuple(self.warnings))
 
-    def to_dict(self) -> Mapping[str, Any]:
-        return MappingProxyType(
-            {
-                "correlation_id": self.correlation_id,
-                "request_id": self.request_id,
-                "idempotency_key": self.idempotency_key,
-                "audit_event_id": self.audit_event_id,
-                "masked_fields": self.masked_fields,
-                "hidden_fields": self.hidden_fields,
-                "warnings": self.warnings,
-            }
-        )
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "correlation_id": self.correlation_id,
+            "request_id": self.request_id,
+            "idempotency_key": self.idempotency_key,
+            "audit_event_id": self.audit_event_id,
+            "masked_fields": thaw_for_json(self.masked_fields),
+            "hidden_fields": thaw_for_json(self.hidden_fields),
+            "warnings": thaw_for_json(self.warnings),
+        }
 
 
 @dataclass(frozen=True)
@@ -54,15 +51,13 @@ class ApiResponse:
     def __post_init__(self) -> None:
         object.__setattr__(self, "meta", ensure_meta(self.meta))
 
-    def to_dict(self) -> Mapping[str, Any]:
-        return MappingProxyType(
-            {
-                "success": self.success,
-                "data": self.data,
-                "error": self.error.to_dict() if self.error else None,
-                "meta": self.meta.to_dict(),
-            }
-        )
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "success": self.success,
+            "data": thaw_for_json(self.data),
+            "error": self.error.to_dict() if self.error else None,
+            "meta": self.meta.to_dict(),
+        }
 
 
 def success_response(data: Any, meta: Optional[ResponseMeta] = None) -> ApiResponse:
