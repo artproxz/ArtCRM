@@ -15,6 +15,10 @@ This pilot setup intentionally does not include business logic. It only defines 
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Final Architecture Review](docs/FINAL_ARCHITECTURE_REVIEW.md)
+- [Permission Matrix and Access-Control Readiness](docs/PERMISSION_MATRIX.md)
+- [Audit Event Taxonomy](docs/AUDIT_EVENT_TAXONOMY.md)
+- [MVP Workflow State Machines](docs/MVP_STATE_MACHINES.md)
+- [MVP API Contracts](docs/MVP_API_CONTRACTS.md)
 - [Domain Model](docs/DOMAIN_MODEL.md)
 - [API Contracts](docs/API_CONTRACTS.md)
 - [Request Lifecycle](docs/REQUEST_LIFECYCLE.md)
