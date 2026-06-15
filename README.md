@@ -15,6 +15,7 @@ This pilot setup intentionally does not include business logic. It only defines 
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Final Architecture Review](docs/FINAL_ARCHITECTURE_REVIEW.md)
+- [MVP Implementation Plan](docs/MVP_IMPLEMENTATION_PLAN.md)
 - [Permission Matrix and Access-Control Readiness](docs/PERMISSION_MATRIX.md)
 - [Audit Event Taxonomy](docs/AUDIT_EVENT_TAXONOMY.md)
 - [MVP Workflow State Machines](docs/MVP_STATE_MACHINES.md)

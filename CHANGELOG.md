@@ -47,3 +47,4 @@ All notable changes to this project will be documented in this file.
 - Added ART-CUSTOMER-003 counterparty search, filters and profile architecture documentation.
 - Added ART-CUSTOMER-004 purchase records linked to counterparties architecture documentation.
 - Added ART-CUSTOMER-005 free counterparty enrichment and company lookup architecture documentation.
+- Added ART-IMPL-005 MVP implementation plan and task slicing before code.
