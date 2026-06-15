@@ -79,6 +79,14 @@ class PermissionDecisionService:
             if service_scope_decision is not None:
                 return service_scope_decision
 
+        effective_permissions = self.get_effective_permissions(actor)
+        if request.permission not in effective_permissions:
+            return self._deny(
+                PermissionDecisionReason.DENIED_MISSING_PERMISSION,
+                request,
+                explanation="Actor does not have the required permission.",
+            )
+
         if request.ownership_required:
             if not request.target_ref or request.target_ref not in actor.owned_object_refs:
                 return self._deny(
@@ -86,32 +94,23 @@ class PermissionDecisionService:
                     request,
                     explanation="Object ownership is required and was not confirmed.",
                 )
-
             return self._allow(
                 PermissionDecisionReason.ALLOWED_BY_OWNERSHIP,
                 request.permission,
-                "Object ownership scope allows this action.",
+                "Permission and object ownership scope allow this action.",
             )
 
-        effective_permissions = self.get_effective_permissions(actor)
-        if request.permission in effective_permissions:
-            if request.permission in actor.explicit_grants and request.permission not in actor.role_template_permissions:
-                return self._allow(
-                    PermissionDecisionReason.ALLOWED_BY_EXPLICIT_GRANT,
-                    request.permission,
-                    "Explicit grant allows this action.",
-                )
-
+        if request.permission in actor.explicit_grants and request.permission not in actor.role_template_permissions:
             return self._allow(
-                PermissionDecisionReason.ALLOWED_BY_ROLE_TEMPLATE,
+                PermissionDecisionReason.ALLOWED_BY_EXPLICIT_GRANT,
                 request.permission,
-                "Role template allows this action.",
+                "Explicit grant allows this action.",
             )
 
-        return self._deny(
-            PermissionDecisionReason.DENIED_MISSING_PERMISSION,
-            request,
-            explanation="Actor does not have the required permission.",
+        return self._allow(
+            PermissionDecisionReason.ALLOWED_BY_ROLE_TEMPLATE,
+            request.permission,
+            "Role template allows this action.",
         )
 
     def decide_field_access(self, actor: ActorContext, request: FieldAccessRequest) -> FieldMaskingDecision:
