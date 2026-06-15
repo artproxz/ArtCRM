@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from itertools import count
 from types import MappingProxyType
-from typing import Any, Callable, Iterable, Mapping, Optional, Tuple
+from typing import Any, Callable, Mapping, Optional, Tuple
 
 from backend.app.auth.permissions import ActorContext
 
