@@ -214,7 +214,7 @@ def preview_counterparty_csv_import(
 ) -> CounterpartyCsvImportPreview:
     rows = parse_counterparty_csv_text(csv_text)
     results: list[CounterpartyCsvImportRowResult] = []
-    seen_counterparty_keys: set[str] = set()
+    seen_counterparties_by_key: dict[str, Counterparty] = {}
     seen_contact_keys: set[str] = set()
 
     for index, row in enumerate(rows, start=2):
@@ -235,14 +235,20 @@ def preview_counterparty_csv_import(
         existing_counterparty = _find_counterparty(repository, counterparty_key)
         status = ROW_STATUS_CREATE
         warnings = list(mapped.warnings)
+        canonical_counterparty = (
+            existing_counterparty
+            or seen_counterparties_by_key.get(counterparty_key)
+            or mapped.counterparty
+        )
         if existing_counterparty is not None:
             status = ROW_STATUS_UPDATE
-        elif counterparty_key in seen_counterparty_keys:
+        elif counterparty_key in seen_counterparties_by_key:
             status = ROW_STATUS_DUPLICATE
             warnings.append("counterparty_duplicate_in_import")
-        seen_counterparty_keys.add(counterparty_key)
+        else:
+            seen_counterparties_by_key[counterparty_key] = mapped.counterparty
 
-        contact = _contact_for_counterparty(mapped.contact, existing_counterparty or mapped.counterparty)
+        contact = _contact_for_counterparty(mapped.contact, canonical_counterparty)
         contact_key = build_contact_dedup_key(contact) if contact else None
         if contact_key:
             if _find_contact(repository, contact_key) is not None or contact_key in seen_contact_keys:

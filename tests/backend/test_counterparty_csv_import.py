@@ -6,6 +6,7 @@ from io import StringIO
 from backend.app.counterparties import Counterparty, CounterpartyContact, InMemoryCounterpartyRepository
 from backend.app.counterparties.importing import (
     ROW_STATUS_CREATE,
+    ROW_STATUS_DUPLICATE,
     ROW_STATUS_SKIPPED,
     ROW_STATUS_UPDATE,
     apply_counterparty_csv_import,
@@ -151,6 +152,60 @@ class CounterpartyCsvImportTests(unittest.TestCase):
 
         self.assertEqual(preview.rows[0].status, ROW_STATUS_CREATE)
         self.assertEqual(self.repository.list_counterparties(), ())
+
+    def test_preview_duplicate_counterparty_batch_dedups_contact_by_email(self):
+        preview = preview_counterparty_csv_import(
+            _csv_many(
+                [
+                    {
+                        "Название компании": "Ромашка 1",
+                        "ИНН компании": "7707123456",
+                        "Контактное лицо": "Иван",
+                        "Почта контактного лица": "ivan@example.com",
+                    },
+                    {
+                        "Название компании": "Ромашка 2",
+                        "ИНН компании": "77 07 123456",
+                        "Контактное лицо": "Иван Петров",
+                        "Почта контактного лица": "Ivan@Example.com",
+                    },
+                ]
+            ),
+            self.repository,
+        )
+
+        self.assertEqual(preview.rows[0].status, ROW_STATUS_CREATE)
+        self.assertEqual(preview.rows[1].status, ROW_STATUS_DUPLICATE)
+        self.assertIn("contact_duplicate", preview.rows[1].warnings)
+        self.assertEqual(preview.rows[0].contact_dedup_key, preview.rows[1].contact_dedup_key)
+        self.assertIn("imported-cp-000001", preview.rows[1].contact_dedup_key)
+        self.assertEqual(preview.summary.contacts_updated, 1)
+
+    def test_preview_duplicate_counterparty_batch_dedups_contact_by_phone(self):
+        preview = preview_counterparty_csv_import(
+            _csv_many(
+                [
+                    {
+                        "Название компании": "Ромашка 1",
+                        "ИНН компании": "7707123456",
+                        "Контактное лицо": "Иван",
+                        "Телефон контактного лица": "+7 (900) 111-22-33",
+                    },
+                    {
+                        "Название компании": "Ромашка 2",
+                        "ИНН компании": "77 07 123456",
+                        "Контактное лицо": "Иван Петров",
+                        "Телефон контактного лица": "+7 900 111 22 33",
+                    },
+                ]
+            ),
+            self.repository,
+        )
+
+        self.assertEqual(preview.rows[1].status, ROW_STATUS_DUPLICATE)
+        self.assertIn("contact_duplicate", preview.rows[1].warnings)
+        self.assertEqual(preview.rows[0].contact_dedup_key, preview.rows[1].contact_dedup_key)
+        self.assertIn("imported-cp-000001", preview.rows[1].contact_dedup_key)
 
     def test_apply_creates_counterparty(self):
         result = apply_counterparty_csv_import(_csv(_full_row()), self.repository)
