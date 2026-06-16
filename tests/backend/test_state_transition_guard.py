@@ -320,6 +320,69 @@ class StateTransitionGuardTests(unittest.TestCase):
         self.assertNotIn("raw_payload", serialized_error)
         self.assertNotIn("api_key", serialized_error)
 
+    def test_explicit_generic_workflow_type_can_use_registered_generic_machine(self):
+        guard = StateTransitionGuard([self._generic_machine()])
+
+        decision = guard.decide(
+            TransitionRequest(
+                workflow_type=WorkflowType.GENERIC,
+                entity_ref="generic:demo",
+                current_state="draft",
+                target_state="done",
+            )
+        )
+
+        self.assertTrue(decision.allowed)
+        self.assertEqual(decision.workflow_type, WorkflowType.GENERIC)
+
+    def test_generic_workflow_string_can_use_registered_generic_machine(self):
+        guard = StateTransitionGuard([self._generic_machine()])
+
+        decision = guard.decide(
+            TransitionRequest(
+                workflow_type="generic",
+                entity_ref="generic:demo",
+                current_state="draft",
+                target_state="done",
+            )
+        )
+
+        self.assertTrue(decision.allowed)
+        self.assertEqual(decision.workflow_type, WorkflowType.GENERIC)
+
+    def test_unknown_workflow_string_is_denied_even_when_generic_machine_registered(self):
+        guard = StateTransitionGuard([self._generic_machine()])
+
+        decision = guard.decide(
+            TransitionRequest(
+                workflow_type="unknown_workflow",
+                entity_ref="generic:demo",
+                current_state="draft",
+                target_state="done",
+            )
+        )
+
+        self.assertFalse(decision.allowed)
+        self.assertEqual(decision.reason_code, TransitionDecisionReason.DENIED_UNKNOWN_WORKFLOW)
+        self.assertEqual(decision.workflow_type, WorkflowType.GENERIC)
+        self.assertEqual(decision.error.code, ErrorCode.INVALID_STATE_TRANSITION)
+
+    def test_unknown_workflow_string_does_not_enter_generic_transition_rules(self):
+        guard = StateTransitionGuard([self._generic_machine()])
+
+        decision = guard.decide(
+            TransitionRequest(
+                workflow_type="request_v2_typo",
+                entity_ref="generic:demo",
+                current_state="draft",
+                target_state="done",
+            )
+        )
+
+        self.assertFalse(decision.allowed)
+        self.assertEqual(decision.reason_code, TransitionDecisionReason.DENIED_UNKNOWN_WORKFLOW)
+        self.assertNotEqual(decision.reason_code, TransitionDecisionReason.ALLOWED_TRANSITION)
+
     @staticmethod
     def _request_machine():
         return StateMachineDefinition(
@@ -351,6 +414,14 @@ class StateTransitionGuardTests(unittest.TestCase):
                 TransitionRule("in_progress", "in_progress", allow_self_transition=True),
                 TransitionRule("rejected", "archived"),
             ),
+        )
+
+    @staticmethod
+    def _generic_machine():
+        return StateMachineDefinition(
+            workflow_type=WorkflowType.GENERIC,
+            known_states={"draft", "done"},
+            transition_rules=(TransitionRule("draft", "done"),),
         )
 
 
