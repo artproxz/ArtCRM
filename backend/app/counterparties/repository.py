@@ -71,6 +71,11 @@ class InMemoryCounterpartyRepository:
                     details={"reason": "direct_status_update_forbidden"},
                 ),
             )
+        if counterparty.contact_refs != existing.contact_refs:
+            return RepositoryResult(
+                success=False,
+                error=conflict_error(entity_ref=counterparty.ref, details={"reason": "direct_contact_refs_update_forbidden"}),
+            )
         self._counterparties[counterparty.counterparty_id] = counterparty
         return RepositoryResult(success=True, value=counterparty)
 
