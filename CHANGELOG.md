@@ -54,3 +54,4 @@ All notable changes to this project will be documented in this file.
 - Added ART-CODE-003 State Transition Guard Utility backend foundation.
 - Added ART-CODE-005 RequestCard and RequestPosition persistence foundation.
 - Added ART-CODE-006 Counterparty Registry persistence foundation.
+- Added ART-CODE-007 Counterparty CSV import preview/apply foundation.
