@@ -33,9 +33,12 @@ class TransitionRequest:
     provided_fields: FrozenSet[str] = field(default_factory=empty_provided_fields)
     correlation_id: Optional[str] = None
     idempotency_key: Optional[str] = None
+    unknown_workflow_type: Optional[str] = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "workflow_type", _coerce_workflow_type(self.workflow_type))
+        workflow_type, unknown_workflow_type = _parse_workflow_type(self.workflow_type)
+        object.__setattr__(self, "workflow_type", workflow_type)
+        object.__setattr__(self, "unknown_workflow_type", unknown_workflow_type)
         object.__setattr__(self, "entity_ref", str(self.entity_ref))
         object.__setattr__(self, "current_state", str(self.current_state))
         object.__setattr__(self, "target_state", str(self.target_state))
@@ -82,6 +85,13 @@ class StateTransitionGuard:
         }
 
     def decide(self, request: TransitionRequest) -> TransitionDecision:
+        if request.unknown_workflow_type is not None:
+            return self._deny(
+                request,
+                TransitionDecisionReason.DENIED_UNKNOWN_WORKFLOW,
+                safe_explanation="Workflow is not registered.",
+            )
+
         definition = self._state_machines.get(request.workflow_type)
         if definition is None:
             return self._deny(
@@ -259,13 +269,20 @@ class StateTransitionGuard:
         return reason is not None and bool(str(reason).strip())
 
 
-def _coerce_workflow_type(workflow_type: WorkflowType) -> WorkflowType:
+def _parse_workflow_type(workflow_type: WorkflowType) -> Tuple[WorkflowType, Optional[str]]:
     if isinstance(workflow_type, WorkflowType):
-        return workflow_type
+        return workflow_type, None
     try:
-        return WorkflowType(workflow_type)
+        return WorkflowType(workflow_type), None
     except ValueError:
-        return WorkflowType.GENERIC
+        return WorkflowType.GENERIC, str(workflow_type)
+
+
+def _coerce_workflow_type(workflow_type: WorkflowType) -> WorkflowType:
+    workflow_type, unknown_workflow_type = _parse_workflow_type(workflow_type)
+    if unknown_workflow_type is not None:
+        raise ValueError(f"Unknown workflow type: {unknown_workflow_type}")
+    return workflow_type
 
 
 def _coerce_reason(reason: TransitionDecisionReason) -> TransitionDecisionReason:
