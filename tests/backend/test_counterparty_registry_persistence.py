@@ -188,6 +188,24 @@ class CounterpartyRegistryPersistenceTests(unittest.TestCase):
         self.assertEqual(result.error.code, ErrorCode.INVALID_STATE_TRANSITION)
         self.assertEqual(self.repository.get_counterparty("cp-001").value.status, CounterpartyStatus.ACTIVE)
 
+    def test_update_counterparty_rejects_direct_contact_refs_change(self):
+        original = Counterparty(counterparty_id="cp-001", display_name="Demo Company")
+        self.repository.create_counterparty(original)
+        changed = replace(
+            original,
+            display_name="Updated Company",
+            contact_refs=("counterparty_contact:missing",),
+        )
+
+        result = self.repository.update_counterparty(changed)
+
+        stored = self.repository.get_counterparty("cp-001").value
+        self.assertFalse(result.success)
+        self.assertEqual(result.error.code, ErrorCode.CONFLICT)
+        self.assertEqual(result.error.details["reason"], "direct_contact_refs_update_forbidden")
+        self.assertEqual(stored.display_name, "Demo Company")
+        self.assertEqual(stored.contact_refs, ())
+
     def test_update_contact_updates_non_sensitive_fields(self):
         self.repository.create_counterparty(Counterparty(counterparty_id="cp-001", display_name="Demo Company"))
         original = CounterpartyContact(
