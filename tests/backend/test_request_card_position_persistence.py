@@ -1,6 +1,6 @@
 import json
 import unittest
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from datetime import datetime, timezone
 
 from backend.app.common import ErrorCode
@@ -189,6 +189,31 @@ class RequestCardPositionPersistenceTests(unittest.TestCase):
         self.assertEqual(result.value.status, RequestStatus.NEW)
         self.assertEqual(self.repository.get_request("demo-001").value.status, RequestStatus.NEW)
 
+    def test_direct_update_request_with_changed_status_is_denied_without_mutation(self):
+        original = RequestCard(request_id="demo-001", title="Original title", internal_notes="Internal note")
+        self.repository.create_request(original)
+        changed = replace(original, status=RequestStatus.NEW, title="Updated title")
+
+        result = self.repository.update_request(changed)
+        stored = self.repository.get_request("demo-001").value
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error.code, ErrorCode.INVALID_STATE_TRANSITION)
+        self.assertEqual(result.error.details["reason"], "direct_status_update_forbidden")
+        self.assertEqual(stored.to_dict(), original.to_dict())
+
+    def test_direct_update_request_without_status_change_updates_non_status_fields(self):
+        original = RequestCard(request_id="demo-001", title="Original title", internal_notes="Internal note")
+        self.repository.create_request(original)
+        changed = replace(original, title="Updated title", internal_notes="Updated internal note")
+
+        result = self.repository.update_request(changed)
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.value.status, original.status)
+        self.assertEqual(result.value.title, "Updated title")
+        self.assertEqual(result.value.internal_notes, "Updated internal note")
+
     def test_updating_position_status_uses_guard_rules(self):
         self.repository.create_request(RequestCard(request_id="demo-001"))
         self.repository.add_position(
@@ -204,6 +229,45 @@ class RequestCardPositionPersistenceTests(unittest.TestCase):
         self.assertTrue(result.success)
         self.assertEqual(result.value.status, RequestPositionStatus.PARSED)
         self.assertEqual(result.transition_decision.reason_code, TransitionDecisionReason.ALLOWED_TRANSITION)
+
+    def test_direct_update_position_with_changed_status_is_denied_without_mutation(self):
+        self.repository.create_request(RequestCard(request_id="demo-001"))
+        original = RequestPosition(
+            position_id="pos-001",
+            request_id="demo-001",
+            line_no=1,
+            source_text="Pressure gauge",
+            review_reason="Original review reason",
+        )
+        self.repository.add_position(original)
+        changed = replace(original, status=RequestPositionStatus.PARSED, review_reason="Updated review reason")
+
+        result = self.repository.update_position(changed)
+        stored = self.repository.get_position("pos-001").value
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error.code, ErrorCode.INVALID_STATE_TRANSITION)
+        self.assertEqual(result.error.details["reason"], "direct_status_update_forbidden")
+        self.assertEqual(stored.to_dict(), original.to_dict())
+
+    def test_direct_update_position_without_status_change_updates_non_status_fields(self):
+        self.repository.create_request(RequestCard(request_id="demo-001"))
+        original = RequestPosition(
+            position_id="pos-001",
+            request_id="demo-001",
+            line_no=1,
+            source_text="Pressure gauge",
+            review_reason="Original review reason",
+        )
+        self.repository.add_position(original)
+        changed = replace(original, source_text="Updated source text", review_reason="Updated review reason")
+
+        result = self.repository.update_position(changed)
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.value.status, original.status)
+        self.assertEqual(result.value.source_text, "Updated source text")
+        self.assertEqual(result.value.review_reason, "Updated review reason")
 
     def test_invalid_position_transition_is_denied_and_does_not_mutate_status(self):
         self.repository.create_request(RequestCard(request_id="demo-001"))
