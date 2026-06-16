@@ -95,4 +95,4 @@ def _coerce_workflow_type(workflow_type: WorkflowType) -> WorkflowType:
     try:
         return WorkflowType(workflow_type)
     except ValueError:
-        return WorkflowType.GENERIC
+        raise ValueError(f"Unknown workflow type: {workflow_type}") from None
