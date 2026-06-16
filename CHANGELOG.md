@@ -52,3 +52,4 @@ All notable changes to this project will be documented in this file.
 - Added ART-CODE-002 Audit Event Service backend foundation.
 - Added ART-CODE-004 common API envelope, error model and idempotency helper foundation.
 - Added ART-CODE-003 State Transition Guard Utility backend foundation.
+- Added ART-CODE-005 RequestCard and RequestPosition persistence foundation.
