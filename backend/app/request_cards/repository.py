@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import FrozenSet, Generic, Iterable, Optional, TypeVar
 
 from backend.app.auth.permissions import ActorContext
-from backend.app.common import ApiError, conflict_error, not_found_error
+from backend.app.common import ApiError, conflict_error, invalid_state_transition_error, not_found_error
 from backend.app.workflow import StateTransitionGuard, TransitionDecision, TransitionRequest
 
 from .models import RequestCard, RequestPosition
@@ -64,10 +64,21 @@ class InMemoryRequestRepository:
         return tuple(sorted(self._requests.values(), key=lambda request: request.created_at))
 
     def update_request(self, request: RequestCard) -> RepositoryResult[RequestCard]:
-        if request.request_id not in self._requests:
+        existing = self._requests.get(request.request_id)
+        if existing is None:
             return RepositoryResult(
                 success=False,
                 error=not_found_error(entity_ref=request.ref, details={"entity": "RequestCard"}),
+            )
+        if request.status != existing.status:
+            return RepositoryResult(
+                success=False,
+                error=invalid_state_transition_error(
+                    entity_ref=request.ref,
+                    from_state=existing.status.value,
+                    to_state=request.status.value,
+                    details={"reason": "direct_status_update_forbidden"},
+                ),
             )
         self._requests[request.request_id] = request
         return RepositoryResult(success=True, value=request)
@@ -151,7 +162,8 @@ class InMemoryRequestRepository:
         return RepositoryResult(success=True, value=position)
 
     def update_position(self, position: RequestPosition) -> RepositoryResult[RequestPosition]:
-        if position.position_id not in self._positions:
+        existing = self._positions.get(position.position_id)
+        if existing is None:
             return RepositoryResult(
                 success=False,
                 error=not_found_error(entity_ref=position.ref, details={"entity": "RequestPosition"}),
@@ -160,6 +172,16 @@ class InMemoryRequestRepository:
             return RepositoryResult(
                 success=False,
                 error=not_found_error(entity_ref=f"request:{position.request_id}", details={"entity": "RequestCard"}),
+            )
+        if position.status != existing.status:
+            return RepositoryResult(
+                success=False,
+                error=invalid_state_transition_error(
+                    entity_ref=position.ref,
+                    from_state=existing.status.value,
+                    to_state=position.status.value,
+                    details={"reason": "direct_status_update_forbidden"},
+                ),
             )
 
         self._positions[position.position_id] = position
